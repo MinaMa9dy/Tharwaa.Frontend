@@ -7,7 +7,9 @@ const nextConfig: NextConfig = {
     '127.0.0.1:3000',
     '192.168.1.5:3000',
     '192.168.1.5',
-    '*.local'
+    '*.local',
+    '*.vercel.app',
+    'sstore.runasp.net'
   ],
   experimental: {
     serverActions: {
@@ -15,7 +17,9 @@ const nextConfig: NextConfig = {
         'localhost:3000',
         '127.0.0.1:3000',
         '192.168.1.5:3000',
-        '192.168.1.5'
+        '192.168.1.5',
+        '*.vercel.app',
+        'sstore.runasp.net'
       ]
     }
   }
