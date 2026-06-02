@@ -303,8 +303,8 @@ export default function AdminDashboardPage() {
             {locale === 'ar' ? 'لا توجد بيانات مبيعات كافية للفترة المحددة' : 'No sales data available for the period'}
           </div>
         ) : (
-          <div className="space-y-6">
-            <div className="h-64 flex items-end justify-between gap-2 pt-6 border-b border-slate-100 px-2 sm:px-4">
+          <div className="space-y-6 overflow-x-auto scrollbar-none">
+            <div className="h-64 flex items-end justify-between gap-2 pt-6 border-b border-slate-100 px-2 sm:px-4 min-w-[540px] md:min-w-0">
               {salesData.map((s) => {
                 const maxAmount = Math.max(...salesData.map(d => d.totalRevenue || 0), 1);
                 const heightPercent = Math.max(((s.totalRevenue || 0) / maxAmount) * 100, 6);
@@ -322,7 +322,7 @@ export default function AdminDashboardPage() {
                 }
 
                 return (
-                  <div key={s.date} className="flex-1 flex flex-col items-center group relative h-full justify-end">
+                  <div key={s.date} className="flex-1 min-w-0 flex flex-col items-center group relative h-full justify-end">
                     {/* Tooltip */}
                     <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-20 bg-slate-900 text-white rounded-xl p-3 text-xs shadow-xl text-right min-w-[140px] -translate-y-2">
                       <p className="font-black text-emerald-400 mb-1">{(s.totalRevenue || 0).toLocaleString()} ج.م</p>
