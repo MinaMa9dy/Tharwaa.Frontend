@@ -9,6 +9,5 @@ export const env = {
   cookieSecret:    process.env.COOKIE_SECRET || 'dev-cookie-secret-change-in-prod-12345',
 } as const;
 
-if (process.env.NODE_ENV === 'development') {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-}
+// Disable SSL/TLS verification rejection to allow self-signed or Let's Encrypt certificates
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
