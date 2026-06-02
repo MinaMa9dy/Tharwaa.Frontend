@@ -1,0 +1,824 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { useLocale } from '@/shared/context/LocaleContext';
+import { productService } from '@/features/products/api/productService';
+import { categoryService } from '@/features/categories/api/categoryService';
+import { ProductDto, CreateProductVariantDto, CreateProductPhotoDto } from '@/shared/types/product';
+import { CategoryDto } from '@/shared/types/category';
+import { toast } from 'react-hot-toast';
+
+interface AttributeLookup {
+  id: string;
+  name: string;
+  dataType: string;
+}
+
+export default function AdminProductsPage() {
+  const { locale, dir } = useLocale();
+  const [products, setProducts] = useState<ProductDto[]>([]);
+  const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [attributes, setAttributes] = useState<AttributeLookup[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<number | ''>('');
+  const [pageSize, setPageSize] = useState(12);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Handle responsive page size detection
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 640) {
+        setPageSize(10);
+      } else {
+        setPageSize(20);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Reset current page when search query or category changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategory]);
+
+  // No longer client-side filtering; we filter via backend.
+  const filteredProducts = products;
+
+  // Modals state
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<ProductDto | null>(null);
+
+  // Form states - General Info
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [categoryId, setCategoryId] = useState<number | ''>('');
+
+  // Form states - Photos List
+  const [photos, setPhotos] = useState<CreateProductPhotoDto[]>([]);
+  const [newPhotoUrl, setNewPhotoUrl] = useState('');
+  const [newPhotoIsMain, setNewPhotoIsMain] = useState(false);
+
+  // Form states - Variants List
+  const [variants, setVariants] = useState<CreateProductVariantDto[]>([]);
+  
+  // Temporary Form states for adding a new variant
+  const [varSku, setVarSku] = useState('');
+  const [varPrice, setVarPrice] = useState<number>(0);
+  const [varStock, setVarStock] = useState<number>(0);
+  const [varAttributes, setVarAttributes] = useState<{ attributeId: string; value: string }[]>([]);
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [pRes, cRes, aRes] = await Promise.all([
+        productService.getAll({ 
+          pageSize, 
+          pageNumber: currentPage, 
+          includeInactive: true, 
+          search: searchQuery,
+          categoryId: selectedCategory === '' ? undefined : Number(selectedCategory)
+        }),
+        categoryService.getAll(),
+        productService.getAttributes()
+      ]);
+
+      if (pRes.success && pRes.data) {
+        setProducts(pRes.data);
+        setTotalPages(pRes.meta?.totalPages || 1);
+      } else {
+        setProducts([]);
+        setTotalPages(1);
+      }
+
+      if (cRes.success && cRes.data) {
+        setCategories(cRes.data.filter(c => c.isActive));
+      }
+
+      if (aRes.success && aRes.data) {
+        setAttributes(aRes.data);
+      }
+    } catch (err) {
+      toast.error(locale === 'ar' ? 'فشل تحميل البيانات الأساسية' : 'Failed to load essential data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      loadData();
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery, selectedCategory, pageSize, currentPage]);
+
+  const openCreateModal = () => {
+    setName('');
+    setDescription('');
+    setCategoryId(categories.length > 0 ? categories[0].id : '');
+    setPhotos([]);
+    setVariants([]);
+    resetVariantForm();
+    setIsCreateOpen(true);
+  };
+
+  const openEditModal = (prod: ProductDto) => {
+    setEditingProduct(prod);
+    setName(prod.name);
+    setDescription(prod.description || '');
+    setCategoryId(prod.categoryId || '');
+    
+    // Map photos
+    const mappedPhotos = prod.files.map(f => ({
+      photoUrl: f.url,
+      isMain: f.isMain || false
+    }));
+    setPhotos(mappedPhotos);
+
+    // Map variants
+    const mappedVariants = prod.variants.map(v => {
+      // Resolve Attribute ID from Attribute Name
+      const resolvedAttrs = v.attributes.map(va => {
+        const matchingAttr = attributes.find(a => a.name.toLowerCase() === va.name.toLowerCase());
+        return {
+          attributeId: matchingAttr ? matchingAttr.id : '',
+          value: va.value
+        };
+      }).filter(attr => attr.attributeId !== '');
+
+      return {
+        sku: v.sku,
+        price: v.price,
+        stockQuantity: v.quantity,
+        variantAttributes: resolvedAttrs
+      };
+    });
+    setVariants(mappedVariants);
+    resetVariantForm();
+    setIsEditOpen(true);
+  };
+
+  const resetVariantForm = () => {
+    setVarSku('');
+    setVarPrice(0);
+    setVarStock(0);
+    setVarAttributes([]);
+  };
+
+  const handleAddPhoto = () => {
+    if (!newPhotoUrl) return;
+    
+    // If setting this as main, unset any other main photo
+    let updatedPhotos = [...photos];
+    if (newPhotoIsMain) {
+      updatedPhotos = updatedPhotos.map(p => ({ ...p, isMain: false }));
+    }
+    
+    updatedPhotos.push({
+      photoUrl: newPhotoUrl,
+      isMain: newPhotoIsMain || photos.length === 0
+    });
+    
+    setPhotos(updatedPhotos);
+    setNewPhotoUrl('');
+    setNewPhotoIsMain(false);
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    const updated = photos.filter((_, idx) => idx !== index);
+    // Ensure at least one isMain if list isn't empty
+    if (updated.length > 0 && !updated.some(p => p.isMain)) {
+      updated[0].isMain = true;
+    }
+    setPhotos(updated);
+  };
+
+  const handleAddAttributeToVariant = () => {
+    if (attributes.length === 0) return;
+    setVarAttributes([...varAttributes, { attributeId: attributes[0].id, value: '' }]);
+  };
+
+  const handleRemoveAttributeFromVariant = (index: number) => {
+    setVarAttributes(varAttributes.filter((_, idx) => idx !== index));
+  };
+
+  const handleAttributeValueChange = (index: number, field: 'attributeId' | 'value', val: string) => {
+    const updated = [...varAttributes];
+    updated[index] = { ...updated[index], [field]: val };
+    setVarAttributes(updated);
+  };
+
+  const handleAddVariant = () => {
+    if (!varSku || varPrice <= 0 || varStock < 0) {
+      toast.error(locale === 'ar' ? 'الرجاء تعبئة بيانات البديل بشكل صحيح' : 'Please fill variant info correctly');
+      return;
+    }
+
+    if (variants.some(v => v.sku.toLowerCase() === varSku.toLowerCase())) {
+      toast.error(locale === 'ar' ? 'هذا الرمز SKU مستخدم بالفعل' : 'SKU is already used');
+      return;
+    }
+
+    const newVar: CreateProductVariantDto = {
+      sku: varSku,
+      price: varPrice,
+      stockQuantity: varStock,
+      variantAttributes: varAttributes.filter(a => a.attributeId && a.value)
+    };
+
+    setVariants([...variants, newVar]);
+    resetVariantForm();
+  };
+
+  const handleRemoveVariant = (sku: string) => {
+    setVariants(variants.filter(v => v.sku !== sku));
+  };
+
+  const handleCreateProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !categoryId) {
+      toast.error(locale === 'ar' ? 'الاسم والقسم مطلوبان' : 'Name and category are required');
+      return;
+    }
+    if (variants.length === 0) {
+      toast.error(locale === 'ar' ? 'يجب إضافة بديل منتج واحد على الأقل مع السعر والمخزون' : 'At least one product variant is required');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await productService.create({
+        name,
+        description,
+        categoryId: Number(categoryId),
+        productPhotos: photos,
+        productVariants: variants
+      });
+
+      if (res.success) {
+        toast.success(locale === 'ar' ? 'تم إضافة المنتج والبدائل بنجاح!' : 'Product and variants created successfully!');
+        setIsCreateOpen(false);
+        loadData();
+      } else {
+        toast.error(res.message || (locale === 'ar' ? 'فشل إضافة المنتج' : 'Failed to add product'));
+      }
+    } catch (err: any) {
+      toast.error(locale === 'ar' ? `خطأ: ${err.message}` : `Error: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct || !name || !categoryId) return;
+    if (variants.length === 0) {
+      toast.error(locale === 'ar' ? 'يجب إبقاء بديل منتج واحد على الأقل' : 'At least one variant must be kept');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await productService.update(editingProduct.id, {
+        name,
+        description,
+        categoryId: Number(categoryId),
+        productPhotos: photos,
+        productVariants: variants
+      });
+
+      if (res.success) {
+        toast.success(locale === 'ar' ? 'تم تحديث المنتج وبدائله بنجاح!' : 'Product and variants updated successfully!');
+        setIsEditOpen(false);
+        setEditingProduct(null);
+        loadData();
+      } else {
+        toast.error(res.message || (locale === 'ar' ? 'فشل تعديل المنتج' : 'Failed to update product'));
+      }
+    } catch (err: any) {
+      toast.error(locale === 'ar' ? `خطأ: ${err.message}` : `Error: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (!confirm(locale === 'ar' ? 'هل أنت متأكد من رغبتك في حذف هذا المنتج نهائياً؟' : 'Are you sure you want to permanently delete this product?')) return;
+    
+    try {
+      const res = await productService.delete(id);
+      if (res.success) {
+        toast.success(locale === 'ar' ? 'تم حذف المنتج بنجاح' : 'Product deleted successfully');
+        loadData();
+      } else {
+        toast.error(res.message || (locale === 'ar' ? 'فشل حذف المنتج' : 'Failed to delete product'));
+      }
+    } catch (err: any) {
+      toast.error(locale === 'ar' ? `خطأ: ${err.message}` : `Error: ${err.message}`);
+    }
+  };
+
+  const handleToggleActive = async (id: string) => {
+    try {
+      const res = await productService.toggleActive(id);
+      if (res.success) {
+        toast.success(locale === 'ar' ? 'تم تحديث حالة المنتج بنجاح' : 'Product status updated successfully');
+        loadData();
+      }
+    } catch (err: any) {
+      toast.error(locale === 'ar' ? `خطأ: ${err.message}` : `Error: ${err.message}`);
+    }
+  };
+
+  return (
+    <div className="space-y-8 animate-fadeIn" dir={dir}>
+      <div className="text-right border-b border-slate-200 pb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-800">
+            {locale === 'ar' ? 'إدارة المنتجات والمخزون' : 'Products & Variants Management'}
+          </h1>
+          <p className="text-slate-400 text-xs sm:text-sm font-bold mt-1">
+            {locale === 'ar' ? 'أضف منتجات، أنشئ خيارات بديلة (الألوان، المقاسات)، حدد سعر الجملة وعدل مستويات المخزون.' : 'Track stock levels, modify variant options, pricing, and configurations.'}
+          </p>
+        </div>
+        <button
+          onClick={openCreateModal}
+          className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/95 text-white font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all"
+        >
+          {locale === 'ar' ? '➕ إضافة منتج جديد' : '➕ Add New Product'}
+        </button>
+      </div>
+
+      {/* Products list */}
+      <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden text-right">
+        <div className="p-5 border-b border-slate-100 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <h3 className="font-black text-slate-800 text-sm shrink-0">
+            {locale === 'ar' ? 'دليل المنتجات والخيارات البديلة' : 'Products & Variants Directory'}
+          </h3>
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            {/* Category Filter Dropdown */}
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value === '' ? '' : Number(e.target.value))}
+              className="text-right px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+            >
+              <option value="">{locale === 'ar' ? 'كل الأقسام' : 'All Categories'}</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {locale === 'ar' ? c.name : c.nameEn || c.name}
+                </option>
+              ))}
+            </select>
+
+            <div className="relative w-full sm:w-64">
+              <span className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
+                🔍
+              </span>
+              <input
+                type="text"
+                placeholder={locale === 'ar' ? 'ابحث باسم المنتج أو الرمز...' : 'Search by name or SKU...'}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full text-right pr-9 pl-3 py-2 text-xs font-bold rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 text-slate-700 placeholder-slate-400"
+              />
+            </div>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="p-6 text-center text-sm font-bold text-slate-400 animate-pulse">
+            {locale === 'ar' ? 'جاري التحميل...' : 'Loading...'}
+          </div>
+        ) : products.length === 0 ? (
+          <div className="p-10 text-center text-sm font-bold text-slate-400">
+            {locale === 'ar' ? 'لا توجد منتجات مسجلة بعد' : 'No products found'}
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="p-10 text-center text-sm font-bold text-slate-400">
+            {locale === 'ar' ? 'لا توجد نتائج تطابق بحثك' : 'No matches found for your search'}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm font-bold text-slate-600 border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/50 text-[11px] font-black text-slate-400 uppercase">
+                  <th className="p-4 text-right">{locale === 'ar' ? 'المنتج' : 'Product'}</th>
+                  <th className="p-4 text-right">{locale === 'ar' ? 'القسم' : 'Category'}</th>
+                  <th className="p-4 text-right">{locale === 'ar' ? 'البدائل المتوفرة' : 'Variants'}</th>
+                  <th className="p-4 text-right">{locale === 'ar' ? 'سعر الجملة' : 'Wholesale Price'}</th>
+                  <th className="p-4 text-right">{locale === 'ar' ? 'إجمالي المخزون' : 'Total Stock'}</th>
+                  <th className="p-4 text-right">{locale === 'ar' ? 'الحالة' : 'Status'}</th>
+                  <th className="p-4 text-center">{locale === 'ar' ? 'الإجراءات' : 'Actions'}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredProducts.map((prod) => (
+                  <tr key={prod.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="p-4">
+                      <div className="flex items-center gap-3 justify-start text-right">
+                        <img
+                          src={prod.files[0]?.url || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=80&q=80'}
+                          alt={prod.name}
+                          className="w-10 h-10 rounded-lg object-cover border border-slate-100 shrink-0 bg-slate-50"
+                        />
+                        <div>
+                          <p className="text-slate-900 font-black">{prod.name}</p>
+                          <p className="text-[10px] text-slate-400 font-bold">{prod.nameEn || ''}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4">{prod.categoryName || (locale === 'ar' ? 'تصنيف عام' : 'General')}</td>
+                    <td className="p-4">
+                      <span className="bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full text-xs font-black">
+                        {prod.variants.length} {locale === 'ar' ? 'خيارات' : 'options'}
+                      </span>
+                    </td>
+                    <td className="p-4 text-slate-800 font-black">{prod.price} ج.م</td>
+                    <td className="p-4">{prod.stockQuantity} قطعة</td>
+                    <td className="p-4">
+                      <button
+                        onClick={() => handleToggleActive(prod.id)}
+                        className={`px-2.5 py-1 rounded-xl text-[10px] font-black border transition-all ${
+                          prod.isActive
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-rose-50 text-rose-700 border-rose-200'
+                        }`}
+                      >
+                        {prod.isActive ? (locale === 'ar' ? 'نشط' : 'Active') : (locale === 'ar' ? 'معطل' : 'Disabled')}
+                      </button>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex gap-2 justify-center items-center">
+                        <button
+                          onClick={() => openEditModal(prod)}
+                          className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors text-xs font-black border border-amber-200"
+                          title={locale === 'ar' ? 'تعديل' : 'Edit'}
+                        >
+                          ✏️ {locale === 'ar' ? 'تعديل' : 'Edit'}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProduct(prod.id)}
+                          className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors text-xs font-black border border-rose-200"
+                          title={locale === 'ar' ? 'حذف' : 'Delete'}
+                        >
+                          🗑️ {locale === 'ar' ? 'حذف' : 'Delete'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Pagination controls */}
+        {!isLoading && products.length > 0 && (
+          <div className="flex items-center justify-center gap-4 p-6 border-t border-slate-100 bg-slate-50">
+            <button
+              onClick={() => {
+                setCurrentPage(p => Math.max(1, p - 1));
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              disabled={currentPage === 1}
+              className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-extrabold text-xs sm:text-sm disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+            >
+              {locale === 'ar' ? 'الصفحة السابقة ➡️' : '⬅️ Previous'}
+            </button>
+            
+            <span className="text-xs sm:text-sm font-black text-slate-600 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200/50">
+              {locale === 'ar' ? `الصفحة ${currentPage}` : `Page ${currentPage}`}
+            </span>
+            
+            <button
+              onClick={() => {
+                setCurrentPage(p => p + 1);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              disabled={currentPage >= totalPages}
+              className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-extrabold text-xs sm:text-sm disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+            >
+              {locale === 'ar' ? '⬅️ الصفحة التالية' : 'Next ➡️'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Creation / Editing Modal */}
+      {(isCreateOpen || isEditOpen) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full border border-slate-200/50 text-right animate-scaleIn my-8">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <h3 className="text-lg font-black text-slate-800">
+                {isCreateOpen
+                  ? (locale === 'ar' ? 'إضافة منتج وبدائل جديدة' : 'Create New Product')
+                  : (locale === 'ar' ? 'تعديل تفاصيل وبدائل المنتج' : 'Edit Product Details')}
+              </h3>
+              <button
+                onClick={() => {
+                  setIsCreateOpen(false);
+                  setIsEditOpen(false);
+                  setEditingProduct(null);
+                }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:text-slate-700 text-xs font-black"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={isCreateOpen ? handleCreateProduct : handleUpdateProduct} className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+              
+              {/* Product Basic Fields */}
+              <div className="space-y-4">
+                <h4 className="font-black text-slate-800 text-xs border-r-4 border-primary pr-2">
+                  {locale === 'ar' ? '1. معلومات المنتج العامة' : '1. General Product Details'}
+                </h4>
+                
+                <div className="space-y-1">
+                  <label className="text-xs font-black text-slate-600">الاسم:</label>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full text-right p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/10 text-xs font-bold bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-black text-slate-600">الوصف:</label>
+                  <textarea
+                    rows={2}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full text-right p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/10 text-xs font-bold bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-black text-slate-600">القسم:</label>
+                  <select
+                    required
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : '')}
+                    className="w-full text-right p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/10 text-xs font-bold bg-white"
+                  >
+                    <option value="">{locale === 'ar' ? 'اختر القسم...' : 'Select Category...'}</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Product Photos Section */}
+              <div className="space-y-4 border-t border-slate-100 pt-5">
+                <h4 className="font-black text-slate-800 text-xs border-r-4 border-primary pr-2">
+                  {locale === 'ar' ? '2. صور المنتج' : '2. Product Images'}
+                </h4>
+
+                <div className="flex gap-2 items-end justify-start">
+                  <div className="flex-1 space-y-1 text-right">
+                    <label className="text-xs font-black text-slate-600">{locale === 'ar' ? 'رابط الصورة المباشر:' : 'Photo URL:'}</label>
+                    <input
+                      type="text"
+                      placeholder="https://example.com/image.jpg"
+                      value={newPhotoUrl}
+                      onChange={(e) => setNewPhotoUrl(e.target.value)}
+                      className="w-full text-right p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/10 text-xs font-bold"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <input
+                      type="checkbox"
+                      id="isMainCheckbox"
+                      checked={newPhotoIsMain}
+                      onChange={(e) => setNewPhotoIsMain(e.target.checked)}
+                      className="w-4 h-4 rounded text-primary focus:ring-primary/20 border-slate-200"
+                    />
+                    <label htmlFor="isMainCheckbox" className="text-xs font-black text-slate-600">{locale === 'ar' ? 'رئيسية' : 'Main'}</label>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddPhoto}
+                    className="px-4 py-3 rounded-xl bg-slate-800 text-white font-black text-xs mb-1.5 hover:bg-slate-700 transition-colors"
+                  >
+                    {locale === 'ar' ? '➕ إضافة' : '➕ Add'}
+                  </button>
+                </div>
+
+                {photos.length > 0 ? (
+                  <div className="grid grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/50">
+                    {photos.map((ph, idx) => (
+                      <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group bg-white flex items-center justify-center">
+                        <img src={ph.photoUrl} alt="" className="w-full h-full object-cover" />
+                        {ph.isMain && (
+                          <span className="absolute top-1 right-1 bg-primary text-white text-[8px] font-black px-1.5 py-0.5 rounded">
+                            {locale === 'ar' ? 'رئيسية' : 'Main'}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePhoto(idx)}
+                          className="absolute inset-0 bg-rose-600/80 text-white font-black text-xs items-center justify-center hidden group-hover:flex transition-opacity duration-200"
+                        >
+                          ✕ {locale === 'ar' ? 'إزالة' : 'Remove'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs font-bold text-slate-400 italic">
+                    {locale === 'ar' ? 'لم يتم إضافة صور بعد. سيتم استخدام الصورة الافتراضية.' : 'No photos added. A default fallback will be used.'}
+                  </p>
+                )}
+              </div>
+
+              {/* Product Variants Section */}
+              <div className="space-y-4 border-t border-slate-100 pt-5">
+                <h4 className="font-black text-slate-800 text-xs border-r-4 border-primary pr-2">
+                  {locale === 'ar' ? '3. خيارات البدائل والمواصفات (ألوان، مقاسات، إلخ)' : '3. Product Variants & Specifications'}
+                </h4>
+
+                {/* Subform to create new variant */}
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/50 space-y-4">
+                  <span className="text-xs font-black text-slate-700 block">
+                    {locale === 'ar' ? '✨ إضافة خيار بديل جديد للمنتج:' : '✨ Configure a new variant:'}
+                  </span>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-500">رمز المخزون (SKU):</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. LAP-16GB-BLACK"
+                        value={varSku}
+                        onChange={(e) => setVarSku(e.target.value)}
+                        className="w-full text-right p-2.5 rounded-lg border border-slate-200 focus:outline-none text-[11px] font-bold bg-white"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-500">سعر الجملة (ج.م):</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={varPrice}
+                        onChange={(e) => setVarPrice(parseFloat(e.target.value) || 0)}
+                        className="w-full text-right p-2.5 rounded-lg border border-slate-200 focus:outline-none text-[11px] font-bold bg-white"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-500">كمية المخزون:</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={varStock}
+                        onChange={(e) => setVarStock(parseInt(e.target.value) || 0)}
+                        className="w-full text-right p-2.5 rounded-lg border border-slate-200 focus:outline-none text-[11px] font-bold bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Attributes within variant subform */}
+                  {attributes.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <button
+                          type="button"
+                          onClick={handleAddAttributeToVariant}
+                          className="px-2 py-1 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 text-[10px] font-black transition-colors"
+                        >
+                          {locale === 'ar' ? '➕ إضافة مواصفة للبديل' : '➕ Add Attribute'}
+                        </button>
+                        <span className="text-[10px] font-black text-slate-500">
+                          {locale === 'ar' ? 'مواصفات هذا البديل:' : 'Variant Attributes:'}
+                        </span>
+                      </div>
+
+                      {varAttributes.map((va, idx) => (
+                        <div key={idx} className="flex gap-2 items-center justify-start">
+                          <select
+                            value={va.attributeId}
+                            onChange={(e) => handleAttributeValueChange(idx, 'attributeId', e.target.value)}
+                            className="p-2 rounded border border-slate-200 text-[10px] font-bold bg-white"
+                          >
+                            {attributes.map(a => (
+                              <option key={a.id} value={a.id}>{a.name}</option>
+                            ))}
+                          </select>
+                          <input
+                            type="text"
+                            placeholder="Value (e.g. XL, Blue)"
+                            value={va.value}
+                            onChange={(e) => handleAttributeValueChange(idx, 'value', e.target.value)}
+                            className="flex-1 p-2 rounded border border-slate-200 text-[10px] font-bold text-right"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveAttributeFromVariant(idx)}
+                            className="p-2 text-rose-600 hover:bg-rose-50 rounded text-xs font-black border border-rose-100"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleAddVariant}
+                    className="w-full py-2 rounded-xl bg-primary text-white font-extrabold text-xs shadow-sm hover:shadow transition-all"
+                  >
+                    {locale === 'ar' ? '📥 إضافة البديل للمنتج الحالي' : '📥 Add Variant to Product'}
+                  </button>
+                </div>
+
+                {/* List of currently configured variants */}
+                {variants.length > 0 ? (
+                  <div className="border border-slate-200 rounded-2xl overflow-hidden text-right">
+                    <div className="bg-slate-100 p-2.5 font-black text-xs text-slate-700">
+                      {locale === 'ar' ? 'البدائل المضافة للمنتج الحالي:' : 'Added Variants List:'}
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                      {variants.map((v) => (
+                        <div key={v.sku} className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:bg-slate-50 transition-colors text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveVariant(v.sku)}
+                            className="px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-black transition-colors shrink-0"
+                          >
+                            🗑️ {locale === 'ar' ? 'إزالة' : 'Remove'}
+                          </button>
+                          
+                          <div className="flex-1 space-y-1.5 w-full">
+                            <div className="flex flex-wrap gap-2 items-center justify-start sm:justify-end">
+                              <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-black uppercase">
+                                SKU: {v.sku}
+                              </span>
+                              {v.variantAttributes && v.variantAttributes.length > 0 && (
+                                <div className="flex flex-wrap gap-1 justify-start sm:justify-end">
+                                  {v.variantAttributes.map((va, idx) => {
+                                    const name = attributes.find(a => a.id === va.attributeId)?.name || '';
+                                    return (
+                                      <span key={idx} className="bg-primary/5 border border-primary/10 text-primary text-[9px] px-1.5 py-0.5 rounded-md font-bold">
+                                        {name}: {va.value}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 font-bold justify-start sm:justify-end">
+                              <span>
+                                {locale === 'ar' ? 'سعر الجملة:' : 'Wholesale Price:'} <span className="text-emerald-700 font-black">{v.price} ج.م</span>
+                              </span>
+                              <span>
+                                {locale === 'ar' ? 'المخزون:' : 'Stock:'} <span className="text-slate-800 font-black">{v.stockQuantity}</span>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs font-black text-rose-600">
+                    ⚠️ {locale === 'ar' ? 'يجب عليك إضافة بديل واحد على الأقل للمنتج لحفظه بنجاح.' : 'You must configure at least one variant to create the product.'}
+                  </p>
+                )}
+              </div>
+
+              {/* Submit button */}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-4 rounded-2xl bg-primary hover:bg-primary/95 text-white font-extrabold text-sm sm:text-base shadow-md hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>{locale === 'ar' ? 'جاري حفظ التغييرات...' : 'Saving changes...'}</span>
+                  </>
+                ) : (
+                  <span>✅ {locale === 'ar' ? 'حفظ ونشر التغييرات' : 'Save & Publish Changes'}</span>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

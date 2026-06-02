@@ -1,0 +1,353 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useLocale } from '@/shared/context/LocaleContext';
+
+export default function LandingPage() {
+  const { t, locale, setLocale, dir } = useLocale();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMenuOpen]);
+
+  return (
+    <div className="min-h-screen flex flex-col font-sans selection:bg-primary selection:text-white" dir={dir}>
+      {/* Premium Glassmorphic Header */}
+      <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
+          <div className="flex items-center gap-3 sm:gap-8">
+            <Link href="/" className="flex items-center gap-2 group">
+              <span className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-primary flex items-center justify-center text-white font-extrabold text-lg sm:text-xl shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform shrink-0">
+                ث
+              </span>
+              <span className="text-lg sm:text-2xl font-black text-slate-800 tracking-tight">
+                {t('navBrand')}
+              </span>
+            </Link>
+            <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
+              <a href="#how-it-works" className="hover:text-primary transition-colors">{t('howItWorks')}</a>
+              <a href="#why-us" className="hover:text-primary transition-colors">{t('whyUs')}</a>
+              <a href="#stats" className="hover:text-primary transition-colors">{t('aboutUs')}</a>
+            </nav>
+          </div>
+
+          {/* Desktop Right Actions (Hidden on Mobile) */}
+          <div className="hidden md:flex items-center gap-4">
+            {/* Language Switcher */}
+            <button
+              onClick={() => setLocale(locale === 'ar' ? 'en' : 'ar')}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1 shrink-0"
+            >
+              🌐 {locale === 'ar' ? 'English' : 'العربية'}
+            </button>
+
+            {/* Auth CTAs */}
+            <Link
+              href="/login"
+              className="text-sm font-bold text-slate-700 hover:text-primary transition-colors px-3 py-2 shrink-0"
+            >
+              {t('login')}
+            </Link>
+            <Link
+              href="/register"
+              className="bg-primary hover:bg-primary-hover text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-primary/10 hover:shadow-primary/25 hover:-translate-y-0.5 active:translate-y-0 transition-all shrink-0"
+            >
+              {t('register')}
+            </Link>
+          </div>
+
+          {/* Mobile Hamburger Button */}
+          <div className="flex md:hidden items-center">
+            <button
+              onClick={() => setIsMenuOpen(true)}
+              className="w-10 h-10 rounded-lg border border-slate-200 flex items-center justify-center text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile Navigation Drawer (Smooth Slide Bar outside header to avoid stacking/transparency bugs) */}
+      <div 
+        className={`fixed inset-0 z-[60] bg-slate-900/65 backdrop-blur-sm transition-all duration-300 overscroll-none ${
+          isMenuOpen ? 'opacity-100 pointer-events-auto visible' : 'opacity-0 pointer-events-none invisible'
+        }`} 
+        onClick={() => setIsMenuOpen(false)}
+      >
+        <div 
+          className={`absolute top-0 bottom-0 w-72 max-w-xs bg-white p-6 shadow-2xl flex flex-col justify-between transition-transform duration-300 ease-out overscroll-none ${
+            dir === 'rtl' ? 'right-0' : 'left-0'
+          } ${
+            isMenuOpen 
+              ? 'translate-x-0' 
+              : (dir === 'rtl' ? 'translate-x-full' : '-translate-x-full')
+            }`} 
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="space-y-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-extrabold text-sm shadow-md">ث</span>
+                <span className="text-lg font-black text-slate-800">{t('navBrand')}</span>
+              </div>
+              <button 
+                onClick={() => setIsMenuOpen(false)} 
+                className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:text-slate-700 text-sm font-bold transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <nav className="flex flex-col gap-5 text-base font-bold text-slate-700">
+              <a href="#how-it-works" onClick={() => setIsMenuOpen(false)} className="hover:text-primary transition-colors pb-2 border-b border-slate-50">{t('howItWorks')}</a>
+              <a href="#why-us" onClick={() => setIsMenuOpen(false)} className="hover:text-primary transition-colors pb-2 border-b border-slate-50">{t('whyUs')}</a>
+              <a href="#stats" onClick={() => setIsMenuOpen(false)} className="hover:text-primary transition-colors pb-2 border-b border-slate-50">{t('aboutUs')}</a>
+            </nav>
+          </div>
+          <div className="space-y-4 border-t border-slate-100 pt-6">
+            <button
+              onClick={() => { setLocale(locale === 'ar' ? 'en' : 'ar'); setIsMenuOpen(false); }}
+              className="w-full py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
+            >
+              🌐 {locale === 'ar' ? 'English' : 'العربية'}
+            </button>
+            <Link 
+              href="/login" 
+              onClick={() => setIsMenuOpen(false)} 
+              className="block w-full text-center text-sm font-bold text-slate-700 hover:text-primary transition-colors py-2"
+            >
+              {t('login')}
+            </Link>
+            <Link 
+              href="/register" 
+              onClick={() => setIsMenuOpen(false)} 
+              className="block w-full text-center bg-primary hover:bg-primary-hover text-white text-sm font-bold py-3 rounded-xl shadow-lg shadow-primary/10 transition-all"
+            >
+              {t('register')}
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Hero Section */}
+      <section className="relative pt-12 pb-20 lg:pt-20 lg:pb-32 bg-gradient-to-b from-slate-50 via-white to-slate-50 overflow-hidden">
+        {/* Decorative Grid Pattern */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#e2e8f0_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f0_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-40"></div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+            
+            {/* Left Column - Content */}
+            <div className="lg:col-span-7 text-center lg:text-start space-y-6">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold tracking-wide uppercase">
+                🚀 {locale === 'ar' ? 'منصة الربح المفضلة في مصر' : 'The Leading Dropshipping Platform'}
+              </span>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-800 leading-[1.15] tracking-tight">
+                {t('heroTitle')}
+              </h1>
+              <p className="text-lg text-slate-600 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-medium">
+                {t('heroSubtitle')}
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
+                <Link
+                  href="/register"
+                  className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-white font-bold text-lg px-8 py-4 rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/30 hover:-translate-y-0.5 transition-all text-center"
+                >
+                  {t('startNow')}
+                </Link>
+                <a
+                  href="#how-it-works"
+                  className="w-full sm:w-auto border-2 border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-900 font-bold text-lg px-8 py-4 rounded-2xl transition-all text-center bg-white/50"
+                >
+                  {t('howItWorks')}
+                </a>
+              </div>
+            </div>
+
+            {/* Right Column - Premium Graphic Visual */}
+            <div className="lg:col-span-5 flex justify-center relative">
+              <div className="absolute w-72 h-72 bg-primary/20 rounded-full blur-3xl -top-12 -left-12 -z-10 animate-pulse"></div>
+              <div className="absolute w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl -bottom-12 -right-12 -z-10"></div>
+              
+              {/* Glassmorphic Mockup Container */}
+              <div className="w-full max-w-md bg-white/70 backdrop-blur-xl border border-white/60 p-8 rounded-3xl shadow-2xl relative overflow-hidden group">
+                <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary to-indigo-500"></div>
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-red-400"></span>
+                    <span className="w-3 h-3 rounded-full bg-yellow-400"></span>
+                    <span className="w-3 h-3 rounded-full bg-green-400"></span>
+                  </div>
+                  <span className="text-xs font-semibold text-slate-400">tharwaa.com/dashboard</span>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Mock Wallet Card */}
+                  <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-2xl text-white shadow-xl relative overflow-hidden">
+                    <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-primary/20 rounded-full blur-2xl"></div>
+                    <span className="text-xs text-slate-400 block mb-1">{locale === 'ar' ? 'الرصيد المتاح للسحب' : 'Available Balance'}</span>
+                    <span className="text-3xl font-black block tracking-tight">12,450.80 EGP</span>
+                    <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-4 text-xs text-slate-300">
+                      <span>🏦 {locale === 'ar' ? 'فودافون كاش / بنك' : 'Vodafone Cash / Bank'}</span>
+                      <span className="bg-primary/20 text-primary font-bold px-2 py-0.5 rounded">{locale === 'ar' ? 'نشط' : 'Active'}</span>
+                    </div>
+                  </div>
+
+                  {/* Mock Order Row */}
+                  <div className="space-y-3">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">{locale === 'ar' ? 'آخر العمليات' : 'Recent Operations'}</span>
+                    {[
+                      { id: '#O-9921', status: 'Delivered', profit: '+120 EGP', color: 'bg-emerald-50 text-emerald-600', textAr: 'تم التوصيل' },
+                      { id: '#O-9918', status: 'Shipped', profit: '+180 EGP', color: 'bg-indigo-50 text-indigo-600', textAr: 'قيد الشحن' },
+                    ].map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <span className="w-8 h-8 rounded-lg bg-slate-200/60 flex items-center justify-center font-bold text-xs text-slate-600">📦</span>
+                          <div>
+                            <span className="text-sm font-bold text-slate-700 block">{item.id}</span>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-0.5 ${item.color}`}>
+                              {locale === 'ar' ? item.textAr : item.status}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-sm font-extrabold text-primary">{item.profit}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* Interactive Timeline Steps Section */}
+      <section id="how-it-works" className="py-20 lg:py-32 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto space-y-4 mb-20">
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-800">
+              {t('stepsTitle')}
+            </h2>
+            <p className="text-slate-500 font-medium">
+              {locale === 'ar' 
+                ? 'رحلة سهلة وبسيطة من التسجيل حتى استلام أول ربح لك في حسابك البنكي أو محفظتك الإلكترونية'
+                : 'A clean and simple journey from signing up to receiving your first profit in your wallet'}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8 relative">
+            {/* Step Card 1 */}
+            <div className="bg-slate-50 hover:bg-white border border-slate-100 hover:border-slate-200 p-4 sm:p-8 rounded-2xl sm:rounded-3xl hover:shadow-xl transition-all duration-300 relative group">
+              <span className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-indigo-50 flex items-center justify-center text-xl sm:text-2xl mb-4 sm:mb-6 group-hover:scale-110 transition-transform">📝</span>
+              <h3 className="text-sm sm:text-xl font-bold text-slate-800 mb-2 sm:mb-3">{t('step1Title')}</h3>
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">{t('step1Desc')}</p>
+            </div>
+
+            {/* Step Card 2 */}
+            <div className="bg-slate-50 hover:bg-white border border-slate-100 hover:border-slate-200 p-4 sm:p-8 rounded-2xl sm:rounded-3xl hover:shadow-xl transition-all duration-300 relative group">
+              <span className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-emerald-50 flex items-center justify-center text-xl sm:text-2xl mb-4 sm:mb-6 group-hover:scale-110 transition-transform">🛍️</span>
+              <h3 className="text-sm sm:text-xl font-bold text-slate-800 mb-2 sm:mb-3">{t('step2Title')}</h3>
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">{t('step2Desc')}</p>
+            </div>
+
+            {/* Step Card 3 */}
+            <div className="bg-slate-50 hover:bg-white border border-slate-100 hover:border-slate-200 p-4 sm:p-8 rounded-2xl sm:rounded-3xl hover:shadow-xl transition-all duration-300 relative group">
+              <span className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-amber-50 flex items-center justify-center text-xl sm:text-2xl mb-4 sm:mb-6 group-hover:scale-110 transition-transform">📞</span>
+              <h3 className="text-sm sm:text-xl font-bold text-slate-800 mb-2 sm:mb-3">{t('step3Title')}</h3>
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">{t('step3Desc')}</p>
+            </div>
+
+            {/* Step Card 4 */}
+            <div className="bg-slate-50 hover:bg-white border border-slate-100 hover:border-slate-200 p-4 sm:p-8 rounded-2xl sm:rounded-3xl hover:shadow-xl transition-all duration-300 relative group">
+              <span className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center text-xl sm:text-2xl mb-4 sm:mb-6 group-hover:scale-110 transition-transform">💰</span>
+              <h3 className="text-sm sm:text-xl font-bold text-slate-800 mb-2 sm:mb-3">{t('step4Title')}</h3>
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">{t('step4Desc')}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Stats Section */}
+      <section id="stats" className="py-16 bg-slate-900 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-indigo-500/10 opacity-30"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
+            <div className="space-y-2">
+              <span className="text-4xl sm:text-5xl font-black text-primary block tracking-tight">{t('statsActiveMarketers')}</span>
+              <span className="text-sm text-slate-400 font-semibold">{locale === 'ar' ? 'مسوق يربح يومياً معنا' : 'Marketers earning daily with us'}</span>
+            </div>
+            <div className="space-y-2 border-y md:border-y-0 md:border-x border-white/10 py-8 md:py-0">
+              <span className="text-4xl sm:text-5xl font-black text-primary block tracking-tight">{t('statsOrdersDelivered')}</span>
+              <span className="text-sm text-slate-400 font-semibold">{locale === 'ar' ? 'طلب تم شحنه وتسليمه بنجاح' : 'Delivered and paid orders'}</span>
+            </div>
+            <div className="space-y-2">
+              <span className="text-4xl sm:text-5xl font-black text-primary block tracking-tight">{t('statsPaidOut')}</span>
+              <span className="text-sm text-slate-400 font-semibold">{locale === 'ar' ? 'دفعت بالكامل للمسوقين' : 'Paid out directly to marketers'}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Us Features Grid */}
+      <section id="why-us" className="py-20 lg:py-32 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto space-y-4 mb-20">
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-800">
+              {t('whyTharwaa')}
+            </h2>
+            <p className="text-slate-500 font-medium">
+              {locale === 'ar' 
+                ? 'نوفر لك البنية التحتية المتكاملة لتوفير الجهد والتركيز على التسويق فقط'
+                : 'We provide you with the full commerce infrastructure so you can focus entirely on sales'}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
+            <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-slate-100 shadow-sm space-y-3 sm:space-y-4 hover:-translate-y-1 transition-transform">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-lg sm:text-xl font-bold">🚀</div>
+              <h3 className="text-sm sm:text-lg font-bold text-slate-800">{t('featuresFastDelivery')}</h3>
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">{t('featuresFastDeliveryDesc')}</p>
+            </div>
+
+            <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-slate-100 shadow-sm space-y-3 sm:space-y-4 hover:-translate-y-1 transition-transform">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-lg sm:text-xl font-bold">💳</div>
+              <h3 className="text-sm sm:text-lg font-bold text-slate-800">{t('featuresNoCapital')}</h3>
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">{t('featuresNoCapitalDesc')}</p>
+            </div>
+
+            <div className="col-span-2 lg:col-span-1 bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-slate-100 shadow-sm space-y-3 sm:space-y-4 hover:-translate-y-1 transition-transform">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-lg sm:text-xl font-bold">☎️</div>
+              <h3 className="text-sm sm:text-lg font-bold text-slate-800">{t('featuresSupport')}</h3>
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">{t('featuresSupportDesc')}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-slate-900 text-slate-400 py-12 border-t border-white/5 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-2">
+            <span className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-extrabold text-sm shadow-md">ث</span>
+            <span className="text-lg font-black text-white">{t('navBrand')}</span>
+          </div>
+          <span className="text-xs font-semibold">
+            &copy; {new Date().getFullYear()} {t('navBrand')}. {locale === 'ar' ? 'جميع الحقوق محفوظة' : 'All rights reserved.'}
+          </span>
+        </div>
+      </footer>
+    </div>
+  );
+}
