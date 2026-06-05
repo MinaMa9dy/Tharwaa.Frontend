@@ -29,8 +29,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const menuItems = [
     { name: 'لوحة التحكم', enName: 'Dashboard', path: '/admin/dashboard', roles: ['Admin', 'Supervisor'] },
-    { name: 'إدارة المشرفين', enName: 'Supervisors', path: '/admin/supervisors', roles: ['Admin'] },
-    { name: 'إدارة الموردين', enName: 'Suppliers', path: '/admin/suppliers', roles: ['Admin'] },
     { name: 'إدارة المنتجات', enName: 'Products', path: '/admin/products', roles: ['Admin'] },
     { name: 'إدارة الأقسام', enName: 'Categories', path: '/admin/categories', roles: ['Admin'] },
     { name: 'المسوقين والعملاء', enName: 'Marketers', path: '/admin/marketers', roles: ['Admin', 'Supervisor'] },

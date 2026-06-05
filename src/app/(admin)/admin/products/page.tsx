@@ -4,10 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { useLocale } from '@/shared/context/LocaleContext';
 import { productService } from '@/features/products/api/productService';
 import { categoryService } from '@/features/categories/api/categoryService';
-import { supplierService } from '@/features/suppliers/api/supplierService';
 import { ProductDto, CreateProductVariantDto, CreateProductPhotoDto } from '@/shared/types/product';
 import { CategoryDto } from '@/shared/types/category';
-import { SupplierDto } from '@/shared/types/supplier';
 import { toast } from 'react-hot-toast';
 
 interface AttributeLookup {
@@ -20,7 +18,6 @@ export default function AdminProductsPage() {
   const { locale, dir } = useLocale();
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
-  const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [attributes, setAttributes] = useState<AttributeLookup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,7 +58,6 @@ export default function AdminProductsPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState<number | ''>('');
-  const [supplierId, setSupplierId] = useState<string>('');
 
   // Form states - Photos List
   const [photos, setPhotos] = useState<CreateProductPhotoDto[]>([]);
@@ -76,14 +72,13 @@ export default function AdminProductsPage() {
   const [varPrice, setVarPrice] = useState<number>(0);
   const [varStock, setVarStock] = useState<number>(0);
   const [varAttributes, setVarAttributes] = useState<{ attributeId: string; value: string }[]>([]);
-  const [editingVariantSku, setEditingVariantSku] = useState<string | null>(null);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [pRes, cRes, aRes, sRes] = await Promise.all([
+      const [pRes, cRes, aRes] = await Promise.all([
         productService.getAll({ 
           pageSize, 
           pageNumber: currentPage, 
@@ -92,8 +87,7 @@ export default function AdminProductsPage() {
           categoryId: selectedCategory === '' ? undefined : Number(selectedCategory)
         }),
         categoryService.getAll(),
-        productService.getAttributes(),
-        supplierService.getAll()
+        productService.getAttributes()
       ]);
 
       if (pRes.success && pRes.data) {
@@ -110,10 +104,6 @@ export default function AdminProductsPage() {
 
       if (aRes.success && aRes.data) {
         setAttributes(aRes.data);
-      }
-
-      if (sRes.success && sRes.data) {
-        setSuppliers(sRes.data.filter(s => s.isActive));
       }
     } catch (err) {
       toast.error(locale === 'ar' ? 'فشل تحميل البيانات الأساسية' : 'Failed to load essential data');
@@ -134,7 +124,6 @@ export default function AdminProductsPage() {
     setName('');
     setDescription('');
     setCategoryId(categories.length > 0 ? categories[0].id : '');
-    setSupplierId(suppliers.length > 0 ? suppliers[0].id : '');
     setPhotos([]);
     setVariants([]);
     resetVariantForm();
@@ -146,7 +135,6 @@ export default function AdminProductsPage() {
     setName(prod.name);
     setDescription(prod.description || '');
     setCategoryId(prod.categoryId || '');
-    setSupplierId(prod.supplierId || '');
     
     // Map photos
     const mappedPhotos = prod.files.map(f => ({
@@ -183,7 +171,6 @@ export default function AdminProductsPage() {
     setVarPrice(0);
     setVarStock(0);
     setVarAttributes([]);
-    setEditingVariantSku(null);
   };
 
   const handleAddPhoto = () => {
@@ -214,14 +201,6 @@ export default function AdminProductsPage() {
     setPhotos(updated);
   };
 
-  const handleSetMainPhoto = (index: number) => {
-    const updated = photos.map((p, idx) => ({
-      ...p,
-      isMain: idx === index
-    }));
-    setPhotos(updated);
-  };
-
   const handleAddAttributeToVariant = () => {
     if (attributes.length === 0) return;
     setVarAttributes([...varAttributes, { attributeId: attributes[0].id, value: '' }]);
@@ -237,72 +216,36 @@ export default function AdminProductsPage() {
     setVarAttributes(updated);
   };
 
-  const handleEditVariant = (v: CreateProductVariantDto) => {
-    setEditingVariantSku(v.sku);
-    setVarSku(v.sku);
-    setVarPrice(v.price);
-    setVarStock(v.stockQuantity);
-    setVarAttributes(v.variantAttributes || []);
-  };
-
   const handleAddVariant = () => {
     if (!varSku || varPrice <= 0 || varStock < 0) {
       toast.error(locale === 'ar' ? 'الرجاء تعبئة بيانات البديل بشكل صحيح' : 'Please fill variant info correctly');
       return;
     }
 
-    if (editingVariantSku) {
-      const otherVariants = variants.filter(v => v.sku.toLowerCase() !== editingVariantSku.toLowerCase());
-      if (otherVariants.some(v => v.sku.toLowerCase() === varSku.toLowerCase())) {
-        toast.error(locale === 'ar' ? 'هذا الرمز SKU مستخدم بالفعل' : 'SKU is already used');
-        return;
-      }
-
-      const updatedVariants = variants.map(v => {
-        if (v.sku.toLowerCase() === editingVariantSku.toLowerCase()) {
-          return {
-            sku: varSku,
-            price: varPrice,
-            stockQuantity: varStock,
-            variantAttributes: varAttributes.filter(a => a.attributeId && a.value)
-          };
-        }
-        return v;
-      });
-
-      setVariants(updatedVariants);
-      resetVariantForm();
-      toast.success(locale === 'ar' ? 'تم تحديث البديل بنجاح' : 'Variant updated successfully');
-    } else {
-      if (variants.some(v => v.sku.toLowerCase() === varSku.toLowerCase())) {
-        toast.error(locale === 'ar' ? 'هذا الرمز SKU مستخدم بالفعل' : 'SKU is already used');
-        return;
-      }
-
-      const newVar: CreateProductVariantDto = {
-        sku: varSku,
-        price: varPrice,
-        stockQuantity: varStock,
-        variantAttributes: varAttributes.filter(a => a.attributeId && a.value)
-      };
-
-      setVariants([...variants, newVar]);
-      resetVariantForm();
-      toast.success(locale === 'ar' ? 'تم إضافة البديل بنجاح' : 'Variant added successfully');
+    if (variants.some(v => v.sku.toLowerCase() === varSku.toLowerCase())) {
+      toast.error(locale === 'ar' ? 'هذا الرمز SKU مستخدم بالفعل' : 'SKU is already used');
+      return;
     }
+
+    const newVar: CreateProductVariantDto = {
+      sku: varSku,
+      price: varPrice,
+      stockQuantity: varStock,
+      variantAttributes: varAttributes.filter(a => a.attributeId && a.value)
+    };
+
+    setVariants([...variants, newVar]);
+    resetVariantForm();
   };
 
   const handleRemoveVariant = (sku: string) => {
-    if (editingVariantSku?.toLowerCase() === sku.toLowerCase()) {
-      resetVariantForm();
-    }
     setVariants(variants.filter(v => v.sku !== sku));
   };
 
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !categoryId || !supplierId) {
-      toast.error(locale === 'ar' ? 'الاسم والقسم والمورد مطلوبون' : 'Name, category, and supplier are required');
+    if (!name || !categoryId) {
+      toast.error(locale === 'ar' ? 'الاسم والقسم مطلوبان' : 'Name and category are required');
       return;
     }
     if (variants.length === 0) {
@@ -316,7 +259,6 @@ export default function AdminProductsPage() {
         name,
         description,
         categoryId: Number(categoryId),
-        supplierId,
         productPhotos: photos,
         productVariants: variants
       });
@@ -329,8 +271,7 @@ export default function AdminProductsPage() {
         toast.error(res.message || (locale === 'ar' ? 'فشل إضافة المنتج' : 'Failed to add product'));
       }
     } catch (err: any) {
-      const errMsg = err.response?.data?.message || err.message || (locale === 'ar' ? 'فشل إضافة المنتج' : 'Failed to add product');
-      toast.error(locale === 'ar' ? `خطأ: ${errMsg}` : `Error: ${errMsg}`);
+      toast.error(locale === 'ar' ? `خطأ: ${err.message}` : `Error: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -338,7 +279,7 @@ export default function AdminProductsPage() {
 
   const handleUpdateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingProduct || !name || !categoryId || !supplierId) return;
+    if (!editingProduct || !name || !categoryId) return;
     if (variants.length === 0) {
       toast.error(locale === 'ar' ? 'يجب إبقاء بديل منتج واحد على الأقل' : 'At least one variant must be kept');
       return;
@@ -350,7 +291,6 @@ export default function AdminProductsPage() {
         name,
         description,
         categoryId: Number(categoryId),
-        supplierId,
         productPhotos: photos,
         productVariants: variants
       });
@@ -364,8 +304,7 @@ export default function AdminProductsPage() {
         toast.error(res.message || (locale === 'ar' ? 'فشل تعديل المنتج' : 'Failed to update product'));
       }
     } catch (err: any) {
-      const errMsg = err.response?.data?.message || err.message || (locale === 'ar' ? 'فشل تعديل المنتج' : 'Failed to update product');
-      toast.error(locale === 'ar' ? `خطأ: ${errMsg}` : `Error: ${errMsg}`);
+      toast.error(locale === 'ar' ? `خطأ: ${err.message}` : `Error: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -383,8 +322,7 @@ export default function AdminProductsPage() {
         toast.error(res.message || (locale === 'ar' ? 'فشل حذف المنتج' : 'Failed to delete product'));
       }
     } catch (err: any) {
-      const errMsg = err.response?.data?.message || err.message || (locale === 'ar' ? 'فشل حذف المنتج' : 'Failed to delete product');
-      toast.error(locale === 'ar' ? `خطأ: ${errMsg}` : `Error: ${errMsg}`);
+      toast.error(locale === 'ar' ? `خطأ: ${err.message}` : `Error: ${err.message}`);
     }
   };
 
@@ -396,8 +334,7 @@ export default function AdminProductsPage() {
         loadData();
       }
     } catch (err: any) {
-      const errMsg = err.response?.data?.message || err.message || (locale === 'ar' ? 'فشل تحديث حالة المنتج' : 'Failed to update product status');
-      toast.error(locale === 'ar' ? `خطأ: ${errMsg}` : `Error: ${errMsg}`);
+      toast.error(locale === 'ar' ? `خطأ: ${err.message}` : `Error: ${err.message}`);
     }
   };
 
@@ -642,23 +579,6 @@ export default function AdminProductsPage() {
                     ))}
                   </select>
                 </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-black text-slate-600">{locale === 'ar' ? 'المورد:' : 'Supplier:'}</label>
-                  <select
-                    required
-                    value={supplierId}
-                    onChange={(e) => setSupplierId(e.target.value)}
-                    className="w-full text-right p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/10 text-xs font-bold bg-white"
-                  >
-                    <option value="">{locale === 'ar' ? 'اختر المورد...' : 'Select Supplier...'}</option>
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.firstName} {s.lastName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
 
               {/* Product Photos Section */}
@@ -698,35 +618,22 @@ export default function AdminProductsPage() {
                 </div>
 
                 {photos.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/50">
+                  <div className="grid grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/50">
                     {photos.map((ph, idx) => (
-                      <div key={idx} className={`flex flex-col rounded-2xl overflow-hidden border bg-white transition-all ${ph.isMain ? 'border-primary ring-2 ring-primary/20' : 'border-slate-200 hover:border-slate-300'}`}>
-                        <div className="relative w-full aspect-square bg-slate-100 border-b border-slate-100">
-                          <img src={ph.photoUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                        </div>
-                        <div className="p-2 sm:p-3 flex gap-2 justify-between items-center bg-slate-50/50 mt-auto">
-                          {ph.isMain ? (
-                            <span className="bg-primary text-white text-[9px] sm:text-[11px] font-black px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl shadow-xs flex items-center gap-1 shrink-0">
-                              ⭐ {locale === 'ar' ? 'رئيسية' : 'Main'}
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleSetMainPhoto(idx)}
-                              className="bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50 border border-slate-200 text-[9px] sm:text-[11px] font-black px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl shadow-xs cursor-pointer transition-all shrink-0"
-                            >
-                              {locale === 'ar' ? 'تعيين رئيسية' : 'Set Main'}
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleRemovePhoto(idx)}
-                            className="bg-rose-600 hover:bg-rose-700 text-white p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-xs font-black cursor-pointer transition-colors shrink-0"
-                            title={locale === 'ar' ? 'إزالة' : 'Remove'}
-                          >
-                            🗑️
-                          </button>
-                        </div>
+                      <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group bg-white flex items-center justify-center">
+                        <img src={ph.photoUrl} alt="" className="w-full h-full object-cover" />
+                        {ph.isMain && (
+                          <span className="absolute top-1 right-1 bg-primary text-white text-[8px] font-black px-1.5 py-0.5 rounded">
+                            {locale === 'ar' ? 'رئيسية' : 'Main'}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePhoto(idx)}
+                          className="absolute inset-0 bg-rose-600/80 text-white font-black text-xs items-center justify-center hidden group-hover:flex transition-opacity duration-200"
+                        >
+                          ✕ {locale === 'ar' ? 'إزالة' : 'Remove'}
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -828,26 +735,13 @@ export default function AdminProductsPage() {
                     </div>
                   )}
 
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleAddVariant}
-                      className="flex-1 py-2 rounded-xl bg-primary text-white font-extrabold text-xs shadow-sm hover:shadow transition-all"
-                    >
-                      {editingVariantSku
-                        ? (locale === 'ar' ? '💾 حفظ تعديلات البديل' : '💾 Save Variant Changes')
-                        : (locale === 'ar' ? '📥 إضافة البديل للمنتج الحالي' : '📥 Add Variant to Product')}
-                    </button>
-                    {editingVariantSku && (
-                      <button
-                        type="button"
-                        onClick={resetVariantForm}
-                        className="py-2 px-4 rounded-xl bg-slate-200 text-slate-700 font-extrabold text-xs hover:bg-slate-300 transition-all"
-                      >
-                        {locale === 'ar' ? 'إلغاء' : 'Cancel'}
-                      </button>
-                    )}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddVariant}
+                    className="w-full py-2 rounded-xl bg-primary text-white font-extrabold text-xs shadow-sm hover:shadow transition-all"
+                  >
+                    {locale === 'ar' ? '📥 إضافة البديل للمنتج الحالي' : '📥 Add Variant to Product'}
+                  </button>
                 </div>
 
                 {/* List of currently configured variants */}
@@ -858,23 +752,14 @@ export default function AdminProductsPage() {
                     </div>
                     <div className="divide-y divide-slate-100">
                       {variants.map((v) => (
-                        <div key={v.sku} className={`p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition-colors text-right ${editingVariantSku?.toLowerCase() === v.sku.toLowerCase() ? 'bg-amber-50/50 border border-amber-200 rounded-xl' : 'hover:bg-slate-50'}`}>
-                          <div className="flex gap-2 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => handleEditVariant(v)}
-                              className="px-3 py-1.5 rounded-xl border border-amber-200 text-amber-600 hover:bg-amber-50 text-xs font-black transition-colors"
-                            >
-                              ✏️ {locale === 'ar' ? 'تعديل' : 'Edit'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveVariant(v.sku)}
-                              className="px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-black transition-colors"
-                            >
-                              🗑️ {locale === 'ar' ? 'إزالة' : 'Remove'}
-                            </button>
-                          </div>
+                        <div key={v.sku} className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:bg-slate-50 transition-colors text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveVariant(v.sku)}
+                            className="px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-black transition-colors shrink-0"
+                          >
+                            🗑️ {locale === 'ar' ? 'إزالة' : 'Remove'}
+                          </button>
                           
                           <div className="flex-1 space-y-1.5 w-full">
                             <div className="flex flex-wrap gap-2 items-center justify-start sm:justify-end">

@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       secure: env.isProd,
       sameSite: 'strict',
       path: '/',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+      maxAge: 15 * 60, // 15 mins
     });
     
     // Set Refresh Token cookie

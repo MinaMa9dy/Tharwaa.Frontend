@@ -18,7 +18,7 @@ function decodeJwt(token: string) {
   }
 }
 
-export default function proxy(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Redirect old localized auth URLs to clean ones

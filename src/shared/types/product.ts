@@ -27,7 +27,6 @@ export interface ProductDto {
   stockQuantity: number;
   categoryId: number;
   categoryName?: string;
-  supplierId: string;
   isActive: boolean;
   variants: ProductVariantDto[];
   files: ProductFileDto[];
@@ -54,7 +53,6 @@ export interface CreateProductDto {
   name: string;
   description: string;
   categoryId: number;
-  supplierId: string;
   productPhotos?: CreateProductPhotoDto[];
   productVariants?: CreateProductVariantDto[];
 }
@@ -63,7 +61,6 @@ export interface UpdateProductDto {
   name: string;
   description: string;
   categoryId: number;
-  supplierId: string;
   productPhotos?: CreateProductPhotoDto[];
   productVariants?: CreateProductVariantDto[];
 }

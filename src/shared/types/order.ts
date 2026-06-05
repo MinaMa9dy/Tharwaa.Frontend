@@ -31,15 +31,10 @@ export interface OrderDto {
   id: number;
   marketerId: string;
   marketerName?: string;
-  supervisorId?: string;
-  supervisorName?: string;
   customerName: string;
   customerPhone: string;
-  customerAddress?: string;
   shippingAddress: AddressDto;
   status: OrderStatus;
-  cancellationReason?: string;
-  notes?: string;
   createdAt: string;
   totalAmount: number;
   totalCost: number;
