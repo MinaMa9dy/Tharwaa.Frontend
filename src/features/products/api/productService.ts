@@ -30,7 +30,8 @@ function mapProduct(p: any): ProductDto {
     stockQuantity: computedStock,
     variants,
     files,
-    isActive: p.isActive !== undefined ? p.isActive : !p.isDeleted
+    isActive: p.isActive !== undefined ? p.isActive : !p.isDeleted,
+    supplierId: p.supplierId || ''
   };
 }
 

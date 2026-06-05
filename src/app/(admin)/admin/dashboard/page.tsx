@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLocale } from '@/shared/context/LocaleContext';
 import { useAuthStore } from '@/features/auth/store/authStore';
@@ -23,29 +23,52 @@ export default function AdminDashboardPage() {
   const [topProducts, setTopProducts] = useState<TopProductDto[]>([]);
   const [salesData, setSalesData] = useState<SalesPeriodDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSalesLoading, setIsSalesLoading] = useState(false);
+
+  const [selectedBarDate, setSelectedBarDate] = useState<string | null>(null);
+  const [groupPeriod, setGroupPeriod] = useState<'day' | 'week' | 'month'>('day');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click/tap (works on both desktop and mobile)
+  useEffect(() => {
+    function handleOutsideClick(e: MouseEvent | TouchEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+      document.addEventListener('touchstart', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, [isDropdownOpen]);
+
+  const [fromDateStr, setFromDateStr] = useState<string>(() => {
+    const fromDate = new Date();
+    fromDate.setDate(fromDate.getDate() - 7);
+    return fromDate.toISOString().split('T')[0];
+  });
+  const [toDateStr, setToDateStr] = useState<string>(() => {
+    return new Date().toISOString().split('T')[0];
+  });
 
   useEffect(() => {
-    async function loadStats() {
+    async function loadStaticStats() {
       setIsLoading(true);
       try {
-        const toDate = new Date();
-        const fromDate = new Date();
-        fromDate.setDate(toDate.getDate() - 7);
-
-        const fromStr = fromDate.toISOString().split('T')[0];
-        const toStr = toDate.toISOString().split('T')[0];
-
-        const [sRes, mRes, pRes, salesRes] = await Promise.all([
+        const [sRes, mRes, pRes] = await Promise.all([
           dashboardService.getStats(),
           dashboardService.getTopMarketers(),
-          dashboardService.getTopProducts(),
-          dashboardService.getSales(fromStr, toStr)
+          dashboardService.getTopProducts()
         ]);
 
         if (sRes.success && sRes.data) setStats(sRes.data);
         if (mRes.success && mRes.data) setTopMarketers(mRes.data);
         if (pRes.success && pRes.data) setTopProducts(pRes.data);
-        if (salesRes.success && salesRes.data) setSalesData(salesRes.data);
 
       } catch (err) {
         // Suppress error
@@ -53,8 +76,27 @@ export default function AdminDashboardPage() {
         setIsLoading(false);
       }
     }
-    loadStats();
+    loadStaticStats();
   }, []);
+
+  useEffect(() => {
+    async function loadSales() {
+      if (!fromDateStr || !toDateStr) return;
+      setIsSalesLoading(true);
+      try {
+        const salesRes = await dashboardService.getSales(fromDateStr, toDateStr);
+        if (salesRes.success && salesRes.data) {
+          setSalesData(salesRes.data);
+          setSelectedBarDate(null);
+        }
+      } catch (err) {
+        // Suppress error
+      } finally {
+        setIsSalesLoading(false);
+      }
+    }
+    loadSales();
+  }, [fromDateStr, toDateStr]);
 
   if (user && user.role !== 'Admin') {
     return (
@@ -175,6 +217,74 @@ export default function AdminDashboardPage() {
     );
   }
 
+  // Dynamic sales data grouping
+  const getGroupedSalesData = () => {
+    if (groupPeriod === 'day') return salesData;
+
+    const groups: { [key: string]: { orderCount: number; totalRevenue: number } } = {};
+
+    salesData.forEach((s) => {
+      let key = s.date;
+      if (groupPeriod === 'week') {
+        try {
+          const d = new Date(s.date);
+          const day = d.getDay();
+          const diff = d.getDate() - day;
+          const Sunday = new Date(d.setDate(diff));
+          key = Sunday.toISOString().split('T')[0];
+        } catch (e) {
+          key = s.date;
+        }
+      } else if (groupPeriod === 'month') {
+        key = s.date.substring(0, 7) + "-01";
+      }
+
+      if (!groups[key]) {
+        groups[key] = { orderCount: 0, totalRevenue: 0 };
+      }
+      groups[key].orderCount += s.orderCount || 0;
+      groups[key].totalRevenue += s.totalRevenue || 0;
+    });
+
+    return Object.keys(groups)
+      .sort()
+      .map((key) => ({
+        date: key,
+        orderCount: groups[key].orderCount,
+        totalRevenue: groups[key].totalRevenue,
+      }));
+  };
+
+  const displayedSalesData = getGroupedSalesData();
+
+  // Find the maximum orders in the displayedSalesData
+  const maxOrders = displayedSalesData.length > 0 
+    ? Math.max(...displayedSalesData.map(d => d.orderCount || 0), 1)
+    : 10;
+  
+  // Calculate a nice rounded ceiling for the Y-Axis
+  let yAxisMax = 5;
+  if (maxOrders <= 5) yAxisMax = 5;
+  else if (maxOrders <= 10) yAxisMax = 10;
+  else if (maxOrders <= 20) yAxisMax = 20;
+  else if (maxOrders <= 50) yAxisMax = 50;
+  else if (maxOrders <= 100) yAxisMax = 100;
+  else if (maxOrders <= 150) yAxisMax = 150;
+  else if (maxOrders <= 200) yAxisMax = 200;
+  else if (maxOrders <= 250) yAxisMax = 250;
+  else if (maxOrders <= 500) yAxisMax = 500;
+  else yAxisMax = Math.ceil(maxOrders / 100) * 100;
+
+  // Let's create exactly 6 intervals like in the mockup (0, 50, 100, 150, 200, 250)
+  const yAxisTicks = [
+    yAxisMax,
+    yAxisMax * 0.8,
+    yAxisMax * 0.6,
+    yAxisMax * 0.4,
+    yAxisMax * 0.2,
+    0
+  ];
+
   return (
     <div className="space-y-8 animate-fadeIn" dir={dir}>
       <div className="text-right">
@@ -270,84 +380,263 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Sales & Revenue History Chart */}
-      <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-right">
-          <div className="space-y-1">
-            <h3 className="font-black text-slate-800 text-sm sm:text-base">
-              {locale === 'ar' ? '📈 حركة المبيعات والإيرادات اليومية' : '📈 Daily Sales & Revenue History'}
-            </h3>
-            <p className="text-[10px] sm:text-xs text-slate-400 font-bold">
-              {locale === 'ar' ? 'تقرير المبيعات والطلبات خلال السبعة أيام الأخيرة' : 'Sales and order activity over the last 7 days'}
-            </p>
-          </div>
-          
-          <div className="flex gap-4 text-right w-full sm:w-auto">
-            <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2 flex-1 sm:flex-none">
-              <span className="text-[9px] text-slate-400 font-bold block">{locale === 'ar' ? 'إجمالي المبيعات' : 'Total Sales'}</span>
-              <span className="text-xs sm:text-sm font-black text-emerald-600">
-                {salesData.reduce((sum, s) => sum + (s.totalRevenue || 0), 0).toLocaleString()} {locale === 'ar' ? 'ج.م' : 'EGP'}
-              </span>
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm">
+        {/* Chart Header */}
+        <div className="flex items-center justify-between px-6 pt-5 pb-4">
+          <h3 className="font-black text-slate-800 text-sm sm:text-base">
+            {locale === 'ar' ? 'الطلبات بمرور الوقت' : 'Orders Over Time'}
+          </h3>
+          <div className="flex items-center gap-2">
+            {/* Grouping dropdown (By Day/Week/Month) */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-600 font-bold hover:bg-slate-50 transition-colors focus:outline-none"
+              >
+                <span>
+                  {groupPeriod === 'day'
+                    ? (locale === 'ar' ? 'يومياً' : 'By Day')
+                    : groupPeriod === 'week'
+                      ? (locale === 'ar' ? 'أسبوعياً' : 'By Week')
+                      : (locale === 'ar' ? 'شهرياً' : 'By Month')
+                  }
+                </span>
+                <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-1 w-32 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-30 text-right">
+                  {(['day', 'week', 'month'] as const).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => { setGroupPeriod(p); setIsDropdownOpen(false); }}
+                      className={`w-full px-3 py-2 text-xs font-bold hover:bg-slate-50 text-right block ${groupPeriod === p ? 'text-emerald-600 bg-emerald-50/60' : 'text-slate-700'}`}
+                    >
+                      {p === 'day' ? (locale === 'ar' ? 'يومياً' : 'By Day') : p === 'week' ? (locale === 'ar' ? 'أسبوعياً' : 'By Week') : (locale === 'ar' ? 'شهرياً' : 'By Month')}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2 flex-1 sm:flex-none">
-              <span className="text-[9px] text-slate-400 font-bold block">{locale === 'ar' ? 'إجمالي الطلبات' : 'Total Orders'}</span>
-              <span className="text-xs sm:text-sm font-black text-indigo-600">
-                {salesData.reduce((sum, s) => sum + (s.orderCount || 0), 0)} {locale === 'ar' ? 'طلب' : 'Orders'}
-              </span>
-            </div>
+
+            {/* Line chart toggle icon */}
+            <button className="bg-white border border-slate-200 rounded-lg p-1.5 text-slate-500 hover:bg-slate-50 transition-colors flex items-center justify-center">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 12l3-3 3 3 4-4M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            </button>
           </div>
         </div>
 
-        {/* Custom CSS Bar Chart */}
-        {salesData.length === 0 ? (
-          <div className="p-12 text-center text-slate-400 font-bold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-            {locale === 'ar' ? 'لا توجد بيانات مبيعات كافية للفترة المحددة' : 'No sales data available for the period'}
+        {/* Date Range + Summary sub-row — stacks on mobile */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-6 pb-4">
+          {/* Date pickers */}
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[11px] text-slate-500 font-bold min-w-0 flex-1 sm:flex-none">
+            <span className="shrink-0">{locale === 'ar' ? 'من' : 'From'}</span>
+            <input
+              type="date"
+              value={fromDateStr}
+              onChange={(e) => setFromDateStr(e.target.value)}
+              className="bg-transparent border-none outline-none text-slate-700 cursor-pointer font-black text-[11px] min-w-0 w-full sm:w-auto"
+            />
+            <span className="text-slate-300 mx-0.5 shrink-0">—</span>
+            <span className="shrink-0">{locale === 'ar' ? 'إلى' : 'To'}</span>
+            <input
+              type="date"
+              value={toDateStr}
+              onChange={(e) => setToDateStr(e.target.value)}
+              className="bg-transparent border-none outline-none text-slate-700 cursor-pointer font-black text-[11px] min-w-0 w-full sm:w-auto"
+            />
           </div>
-        ) : (
-          <div className="space-y-6 overflow-x-auto scrollbar-none">
-            <div className="h-64 flex items-end justify-between gap-2 pt-6 border-b border-slate-100 px-2 sm:px-4 min-w-[540px] md:min-w-0">
-              {salesData.map((s) => {
-                const maxAmount = Math.max(...salesData.map(d => d.totalRevenue || 0), 1);
-                const heightPercent = Math.max(((s.totalRevenue || 0) / maxAmount) * 100, 6);
-                
-                // Format Date nicely
-                let formattedDay = '';
-                try {
-                  const dateObj = new Date(s.date);
-                  formattedDay = dateObj.toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-US', { 
-                    weekday: 'short', 
-                    day: 'numeric' 
-                  });
-                } catch (e) {
-                  formattedDay = s.date;
-                }
+          {/* Summary pills */}
+          <div className="flex items-center gap-2 sm:ml-auto">
+            <span className="bg-emerald-50 border border-emerald-100 rounded-lg px-2.5 py-1.5 text-[11px] font-black text-emerald-600 whitespace-nowrap">
+              {displayedSalesData.reduce((sum, s) => sum + (s.totalRevenue || 0), 0).toLocaleString()} {locale === 'ar' ? 'ج.م' : 'EGP'}
+            </span>
+            <span className="bg-indigo-50 border border-indigo-100 rounded-lg px-2.5 py-1.5 text-[11px] font-black text-indigo-600 whitespace-nowrap">
+              {displayedSalesData.reduce((sum, s) => sum + (s.orderCount || 0), 0)} {locale === 'ar' ? 'طلب' : 'Orders'}
+            </span>
+          </div>
+        </div>
 
-                return (
-                  <div key={s.date} className="flex-1 min-w-0 flex flex-col items-center group relative h-full justify-end">
-                    {/* Tooltip */}
-                    <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-20 bg-slate-900 text-white rounded-xl p-3 text-xs shadow-xl text-right min-w-[140px] -translate-y-2">
-                      <p className="font-black text-emerald-400 mb-1">{(s.totalRevenue || 0).toLocaleString()} ج.م</p>
-                      <p className="font-semibold text-slate-300">📦 {s.orderCount || 0} {locale === 'ar' ? 'طلبات' : 'orders'}</p>
-                      <p className="text-[10px] text-slate-400 border-t border-slate-700/50 mt-1 pt-1">{s.date}</p>
-                    </div>
+        {/* Divider */}
+        <div className="border-t border-slate-100" />
 
-                    {/* Bar */}
-                    <div 
-                      style={{ height: `${heightPercent}%` }}
-                      className="w-full max-w-[44px] rounded-t-xl bg-gradient-to-t from-primary/80 to-primary hover:from-primary hover:to-indigo-500 transition-all duration-500 relative cursor-pointer shadow-sm hover:shadow-md"
-                    >
-                      <div className="absolute inset-x-0 top-0 h-1 bg-white/30 rounded-t-xl" />
-                    </div>
-                    
-                    {/* Label */}
-                    <span className="text-[10px] sm:text-xs text-slate-500 font-bold mt-2 truncate w-full text-center">
-                      {formattedDay}
-                    </span>
-                  </div>
-                );
-              })}
+        {/* Chart Body */}
+        <div className={`px-6 pb-4 pt-4 transition-opacity duration-300 ${isSalesLoading ? 'opacity-50' : 'opacity-100'}`}>
+          {displayedSalesData.length === 0 ? (
+            <div className="h-64 flex items-center justify-center text-slate-400 font-bold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+              {locale === 'ar' ? 'لا توجد بيانات مبيعات للفترة المحددة' : 'No sales data available for the period'}
             </div>
-          </div>
-        )}
+          ) : (
+            <div style={{ overflowX: 'auto', overflowY: 'visible' }} className="scrollbar-none pb-1">
+              <div className="min-w-[480px]" style={{ direction: 'ltr' }}>
+                {/* Chart area: extra top padding = tooltip height headroom */}
+                <div className="flex gap-3" style={{ height: '19rem', paddingTop: '4rem' }}>
+                  {/* Y-Axis labels */}
+                  <div className="flex flex-col justify-between text-[11px] text-slate-400 font-semibold w-9 text-right shrink-0 pb-0 pt-1 select-none">
+                    {yAxisTicks.map((val, idx) => (
+                      <span key={idx} className="leading-none">{Math.round(val)}</span>
+                    ))}
+                  </div>
+
+                  {/* Grid + bars */}
+                  <div className="flex-1 relative">
+                    {/* Horizontal gridlines */}
+                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                      {yAxisTicks.map((_, idx) => (
+                        <div key={idx} className="w-full border-t border-dashed border-slate-100" />
+                      ))}
+                    </div>
+
+                    {/* Bars row — overflow-visible so tooltips escape upward */}
+                    <div className="absolute inset-0 flex items-end gap-2 px-2" style={{ overflow: 'visible' }}>
+                      {displayedSalesData.map((s, idx) => {
+                        const heightPercent = Math.max(((s.orderCount || 0) / yAxisMax) * 100, 1.5);
+
+                        const isFirst = idx === 0;
+                        const isLast = idx === displayedSalesData.length - 1;
+
+                        let tooltipAlignClass = 'left-1/2 -translate-x-1/2';
+                        let arrowAlignClass = 'left-1/2 -translate-x-1/2';
+
+                        if (displayedSalesData.length > 1) {
+                          if (isFirst) {
+                            tooltipAlignClass = 'left-1/2 -translate-x-[5%]';
+                            arrowAlignClass = 'left-[5%] -translate-x-1/2';
+                          } else if (isLast) {
+                            tooltipAlignClass = 'left-1/2 -translate-x-[95%]';
+                            arrowAlignClass = 'left-[95%] -translate-x-1/2';
+                          }
+                        }
+
+                        let tooltipDateStr = s.date || (s as any).Date || '';
+                        const cleanDate = tooltipDateStr.split('T')[0];
+                        if (groupPeriod === 'week') {
+                          tooltipDateStr = locale === 'ar' ? `أسبوع ${cleanDate}` : `Week of ${cleanDate}`;
+                        } else if (groupPeriod === 'month') {
+                          tooltipDateStr = locale === 'ar' ? `شهر ${cleanDate.substring(0, 7)}` : `Month ${cleanDate.substring(0, 7)}`;
+                        } else {
+                          tooltipDateStr = cleanDate;
+                        }
+
+                        const isSelected = selectedBarDate === s.date;
+
+                        return (
+                          <div
+                            key={s.date}
+                            className="flex-1 flex flex-col justify-end items-center group relative h-full"
+                            style={{ minWidth: 0, overflow: 'visible' }}
+                          >
+                            {/* Selected Bar Info Box */}
+                            <div
+                              className={`absolute bottom-full mb-2 z-20 pointer-events-none transition-all duration-200 ${tooltipAlignClass} ${isSelected ? 'opacity-100 -translate-y-1' : 'opacity-0 invisible'}`}
+                              style={{ overflow: 'visible' }}
+                            >
+                              <div
+                                className={`bg-white border border-slate-200 rounded-xl px-3 py-2.5 shadow-xl whitespace-nowrap ${locale === 'ar' ? 'text-right' : 'text-left'}`}
+                                dir={locale === 'ar' ? 'rtl' : 'ltr'}
+                              >
+                                <div className="text-[11px] font-black text-slate-700 mb-2 border-b border-slate-100 pb-1">
+                                  {tooltipDateStr}
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                  <div className="flex items-center justify-between gap-5">
+                                    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+                                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 inline-block" />
+                                      <span>{locale === 'ar' ? 'الطلبات' : 'Orders'}</span>
+                                    </div>
+                                    <span className="text-sm font-black text-slate-900">{s.orderCount || 0}</span>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-5">
+                                    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+                                      <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0 inline-block" />
+                                      <span>{locale === 'ar' ? 'الإيرادات' : 'Revenue'}</span>
+                                    </div>
+                                    <span className="text-sm font-black text-slate-900">
+                                      {(s.totalRevenue || 0).toLocaleString()} {locale === 'ar' ? 'ج.م' : 'EGP'}
+                                    </span>
+                                  </div>
+                                </div>
+                                {/* Arrow */}
+                                <div className={`absolute top-full -mt-px w-2.5 h-2.5 bg-white border-r border-b border-slate-200 rotate-45 ${arrowAlignClass}`} />
+                              </div>
+                            </div>
+
+                            {/* Bar */}
+                            <div
+                              style={{ height: `${heightPercent}%` }}
+                              onClick={() => setSelectedBarDate(isSelected ? null : s.date)}
+                              className={`w-full rounded-t-lg cursor-pointer transition-all duration-300 relative overflow-hidden ${
+                                isSelected
+                                  ? 'bg-gradient-to-t from-emerald-600 to-emerald-500 shadow-lg shadow-emerald-500/30'
+                                  : 'bg-gradient-to-t from-emerald-500/80 to-emerald-400 hover:from-emerald-600 hover:to-emerald-500 hover:shadow-md hover:shadow-emerald-500/20'
+                              }`}
+                            >
+                              {/* shine strip */}
+                              <div className="absolute inset-x-0 top-0 h-[3px] bg-white/25 rounded-t-lg" />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* X-Axis Labels */}
+                <div className="flex gap-2 mt-2 pl-12">
+                  {displayedSalesData.map((s) => {
+                    let label = '';
+                    try {
+                      const dateVal = s.date || (s as any).Date || '';
+                      const cleanDate = dateVal.split('T')[0];
+                      const parts = cleanDate.split('-');
+                      if (parts.length === 3) {
+                        const year = parts[0];
+                        const month = parts[1];
+                        const day = parts[2];
+                        const monthsAr = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+                        const monthsEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                        const monthIndex = parseInt(month, 10) - 1;
+                        const monthName = locale === 'ar' ? monthsAr[monthIndex] : monthsEn[monthIndex];
+
+                        if (groupPeriod === 'day') {
+                          label = locale === 'ar'
+                            ? `${parseInt(day, 10)} ${monthName}`
+                            : `${monthName} ${parseInt(day, 10)}`;
+                        } else if (groupPeriod === 'week') {
+                          label = locale === 'ar'
+                            ? `أسبوع ${parseInt(day, 10)} ${monthName}`
+                            : `Wk ${monthName} ${parseInt(day, 10)}`;
+                        } else {
+                          label = locale === 'ar'
+                            ? `${monthName} ${year.substring(2)}`
+                            : `${monthName} ${year.substring(2)}`;
+                        }
+                      } else {
+                        label = dateVal;
+                      }
+                    } catch {
+                      label = s.date || '';
+                    }
+                    return (
+                      <span
+                        key={s.date}
+                        className="flex-1 text-center text-[10px] text-slate-400 font-semibold select-none truncate"
+                        style={{ minWidth: 0 }}
+                        dir={locale === 'ar' ? 'rtl' : 'ltr'}
+                      >
+                        {label}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       

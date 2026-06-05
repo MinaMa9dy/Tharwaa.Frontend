@@ -38,7 +38,7 @@ export async function POST() {
       secure: env.isProd,
       sameSite: 'strict',
       path: '/',
-      maxAge: 15 * 60, // 15 mins
+      maxAge: 7 * 24 * 60 * 60, // 7 days
     });
 
     res.cookies.set('refresh_token', newRefreshToken, {

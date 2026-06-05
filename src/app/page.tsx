@@ -36,7 +36,7 @@ export default function LandingPage() {
             <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
               <a href="#how-it-works" className="hover:text-primary transition-colors">{t('howItWorks')}</a>
               <a href="#why-us" className="hover:text-primary transition-colors">{t('whyUs')}</a>
-              <a href="#stats" className="hover:text-primary transition-colors">{t('aboutUs')}</a>
+              <a href="#about-us" className="hover:text-primary transition-colors">{t('aboutUs')}</a>
             </nav>
           </div>
 
@@ -112,7 +112,7 @@ export default function LandingPage() {
             <nav className="flex flex-col gap-5 text-base font-bold text-slate-700">
               <a href="#how-it-works" onClick={() => setIsMenuOpen(false)} className="hover:text-primary transition-colors pb-2 border-b border-slate-50">{t('howItWorks')}</a>
               <a href="#why-us" onClick={() => setIsMenuOpen(false)} className="hover:text-primary transition-colors pb-2 border-b border-slate-50">{t('whyUs')}</a>
-              <a href="#stats" onClick={() => setIsMenuOpen(false)} className="hover:text-primary transition-colors pb-2 border-b border-slate-50">{t('aboutUs')}</a>
+              <a href="#about-us" onClick={() => setIsMenuOpen(false)} className="hover:text-primary transition-colors pb-2 border-b border-slate-50">{t('aboutUs')}</a>
             </nav>
           </div>
           <div className="space-y-4 border-t border-slate-100 pt-6">
@@ -300,41 +300,159 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* About Us Section */}
+      <section id="about-us" className="py-20 lg:py-32 bg-white relative overflow-hidden">
+        {/* Background blobs for visual premium polish */}
+        <div className="absolute top-1/4 left-0 w-80 h-80 bg-primary/5 rounded-full blur-3xl -z-10"></div>
+        <div className="absolute bottom-1/4 right-0 w-80 h-80 bg-indigo-500/5 rounded-full blur-3xl -z-10"></div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+            
+            {/* Description / Content Column */}
+            <div className="lg:col-span-7 space-y-6">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider">
+                👥 {t('aboutUs')}
+              </span>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-800 leading-tight">
+                {t('aboutUsTitle')}
+              </h2>
+              <p className="text-lg text-primary font-bold leading-relaxed">
+                {t('aboutUsSubtitle')}
+              </p>
+              <div className="space-y-4 text-slate-600 font-medium leading-relaxed text-sm sm:text-base">
+                <p>{t('aboutUsDesc1')}</p>
+                <p>{t('aboutUsDesc2')}</p>
+              </div>
+
+              {/* Vision & Mission Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6">
+                <div className="p-6 bg-slate-50 hover:bg-white border border-slate-100 hover:border-slate-200/80 hover:shadow-lg rounded-2xl transition-all duration-300">
+                  <span className="text-2xl mb-3 block">🎯</span>
+                  <h4 className="text-base font-bold text-slate-800 mb-2">{t('aboutUsVision')}</h4>
+                  <p className="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed">{t('aboutUsVisionDesc')}</p>
+                </div>
+                <div className="p-6 bg-slate-50 hover:bg-white border border-slate-100 hover:border-slate-200/80 hover:shadow-lg rounded-2xl transition-all duration-300">
+                  <span className="text-2xl mb-3 block">🤝</span>
+                  <h4 className="text-base font-bold text-slate-800 mb-2">{t('aboutUsMission')}</h4>
+                  <p className="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed">{t('aboutUsMissionDesc')}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Core Values Column (Glassmorphic Mock Card) */}
+            <div className="lg:col-span-5 relative flex justify-center">
+              <div className="w-full max-w-sm bg-gradient-to-br from-slate-950 to-slate-850 p-8 rounded-3xl text-white shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-2xl"></div>
+                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-indigo-500"></div>
+                
+                <h3 className="text-xl font-black mb-6 border-b border-white/10 pb-4 flex items-center gap-2">
+                  <span>💡</span> {locale === 'ar' ? 'قيمنا الجوهرية' : 'Our Core Values'}
+                </h3>
+                
+                <ul className="space-y-5">
+                  {[
+                    { title: locale === 'ar' ? 'الشفافية الكاملة' : 'Full Transparency', desc: locale === 'ar' ? 'حساب دقيق للأرباح دون رسوم خفية.' : 'Accurate profit tracking with no hidden fees.' },
+                    { title: locale === 'ar' ? 'الجودة والموثوقية' : 'Quality & Reliability', desc: locale === 'ar' ? 'اختبار دقيق للمنتجات قبل الشحن لعملائك.' : 'Rigorous product testing before shipping to customers.' },
+                    { title: locale === 'ar' ? 'تمكين المسوقين' : 'Marketer Empowerment', desc: locale === 'ar' ? 'دعم تدريبي وتقني متكامل ومستمر لمساعدتك على النجاح.' : 'Continuous training and technical support to ensure your success.' }
+                  ].map((value, idx) => (
+                    <li key={idx} className="flex gap-3 items-start">
+                      <span className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">✓</span>
+                      <div>
+                        <strong className="text-sm font-bold text-slate-100 block">{value.title}</strong>
+                        <span className="text-xs text-slate-400 font-medium mt-0.5 block leading-relaxed">{value.desc}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
       {/* Why Us Features Grid */}
-      <section id="why-us" className="py-20 lg:py-32 bg-slate-50">
+      <section id="why-us" className="py-20 lg:py-32 bg-slate-50 relative overflow-hidden">
+        {/* Background decorative elements */}
+        <div className="absolute top-1/4 left-0 w-80 h-80 bg-primary/5 rounded-full blur-3xl -z-10"></div>
+        <div className="absolute bottom-1/4 right-0 w-80 h-80 bg-indigo-500/5 rounded-full blur-3xl -z-10"></div>
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto space-y-4 mb-20">
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-800">
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider">
+              ⭐ {locale === 'ar' ? 'مميزات المنصة' : 'Platform Features'}
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-800 tracking-tight">
               {t('whyTharwaa')}
             </h2>
             <p className="text-slate-500 font-medium">
               {locale === 'ar' 
-                ? 'نوفر لك البنية التحتية المتكاملة لتوفير الجهد والتركيز على التسويق فقط'
-                : 'We provide you with the full commerce infrastructure so you can focus entirely on sales'}
+                ? 'نوفر لك البنية التحتية المتكاملة لتوفير الجهد والتركيز على التسويق وتحقيق المبيعات فقط'
+                : 'We provide you with the full commerce infrastructure so you can focus entirely on marketing and sales'}
             </p>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
-            <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-slate-100 shadow-sm space-y-3 sm:space-y-4 hover:-translate-y-1 transition-transform">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-lg sm:text-xl font-bold">🚀</div>
-              <h3 className="text-sm sm:text-lg font-bold text-slate-800">{t('featuresFastDelivery')}</h3>
-              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">{t('featuresFastDeliveryDesc')}</p>
-            </div>
-
-            <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-slate-100 shadow-sm space-y-3 sm:space-y-4 hover:-translate-y-1 transition-transform">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-lg sm:text-xl font-bold">💳</div>
-              <h3 className="text-sm sm:text-lg font-bold text-slate-800">{t('featuresNoCapital')}</h3>
-              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">{t('featuresNoCapitalDesc')}</p>
-            </div>
-
-            <div className="col-span-2 lg:col-span-1 bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-slate-100 shadow-sm space-y-3 sm:space-y-4 hover:-translate-y-1 transition-transform">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-lg sm:text-xl font-bold">☎️</div>
-              <h3 className="text-sm sm:text-lg font-bold text-slate-800">{t('featuresSupport')}</h3>
-              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">{t('featuresSupportDesc')}</p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            {[
+              {
+                icon: '💳',
+                titleKey: 'featuresNoCapital',
+                descKey: 'featuresNoCapitalDesc',
+              },
+              {
+                icon: '🚀',
+                titleKey: 'featuresFastDelivery',
+                descKey: 'featuresFastDeliveryDesc',
+              },
+              {
+                icon: '📈',
+                titleKey: 'featuresHighMargins',
+                descKey: 'featuresHighMarginsDesc',
+              },
+              {
+                icon: '💰',
+                titleKey: 'featuresInstantWithdrawal',
+                descKey: 'featuresInstantWithdrawalDesc',
+              },
+              {
+                icon: '✨',
+                titleKey: 'featuresReadyContent',
+                descKey: 'featuresReadyContentDesc',
+              },
+              {
+                icon: '☎️',
+                titleKey: 'featuresSupport',
+                descKey: 'featuresSupportDesc',
+              },
+            ].map((feature, idx) => (
+              <div 
+                key={idx} 
+                className="bg-white/80 backdrop-blur-sm border border-slate-100 hover:border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 relative group overflow-hidden"
+              >
+                {/* Accent line on hover */}
+                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                
+                {/* Background glow decoration */}
+                <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-primary/5 rounded-full blur-xl group-hover:bg-primary/10 transition-colors"></div>
+                
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/10 to-indigo-500/5 text-primary flex items-center justify-center text-2xl font-bold mb-5 shadow-sm group-hover:scale-110 group-hover:from-primary group-hover:to-indigo-500 group-hover:text-white transition-all duration-300">
+                  {feature.icon}
+                </div>
+                
+                <h3 className="text-lg font-bold text-slate-800 mb-3 group-hover:text-primary transition-colors">
+                  {t(feature.titleKey)}
+                </h3>
+                
+                <p className="text-sm text-slate-500 leading-relaxed font-medium relative z-10">
+                  {t(feature.descKey)}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
+
 
       {/* Footer */}
       <footer className="bg-slate-900 text-slate-400 py-12 border-t border-white/5 mt-auto">
