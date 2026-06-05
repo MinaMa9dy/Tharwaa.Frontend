@@ -58,6 +58,11 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     async function loadStaticStats() {
+      // Only Admin can access these endpoints
+      if (!user || user.role !== 'Admin') {
+        setIsLoading(false);
+        return;
+      }
       setIsLoading(true);
       try {
         const [sRes, mRes, pRes] = await Promise.all([
@@ -77,10 +82,12 @@ export default function AdminDashboardPage() {
       }
     }
     loadStaticStats();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     async function loadSales() {
+      // Only Admin can access the sales endpoint
+      if (!user || user.role !== 'Admin') return;
       if (!fromDateStr || !toDateStr) return;
       setIsSalesLoading(true);
       try {
@@ -96,7 +103,7 @@ export default function AdminDashboardPage() {
       }
     }
     loadSales();
-  }, [fromDateStr, toDateStr]);
+  }, [user, fromDateStr, toDateStr]);
 
   if (user && user.role !== 'Admin') {
     return (
@@ -142,36 +149,6 @@ export default function AdminDashboardPage() {
                     </h4>
                     <p className="text-slate-400 text-[10px] sm:text-xs font-semibold leading-relaxed">
                       {locale === 'ar' ? 'متابعة الطلبات وتحديث حالات التوصيل والمشكلات.' : 'Track, filter and update orders delivery status.'}
-                    </p>
-                  </div>
-                </Link>
-
-                <Link
-                  href="/admin/withdrawals"
-                  className="bg-white hover:bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all text-right flex flex-col justify-between space-y-3 sm:space-y-4 group"
-                >
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg sm:text-xl font-bold group-hover:scale-110 transition-transform">💳</div>
-                  <div className="space-y-1">
-                    <h4 className="font-black text-slate-800 text-xs sm:text-base">
-                      {locale === 'ar' ? 'مراجعة طلبات السحب' : 'Payout Requests'}
-                    </h4>
-                    <p className="text-slate-400 text-[10px] sm:text-xs font-semibold leading-relaxed">
-                      {locale === 'ar' ? 'تدقيق طلبات سحب الأرباح وتأكيد التحويلات المالية.' : 'Review and approve payout requests from marketers.'}
-                    </p>
-                  </div>
-                </Link>
-
-                <Link
-                  href="/admin/marketers"
-                  className="col-span-2 lg:col-span-1 bg-white hover:bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all text-right flex flex-col justify-between space-y-3 sm:space-y-4 group"
-                >
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg sm:text-xl font-bold group-hover:scale-110 transition-transform">👥</div>
-                  <div className="space-y-1">
-                    <h4 className="font-black text-slate-800 text-xs sm:text-base">
-                      {locale === 'ar' ? 'المسوقين والعملاء' : 'Marketers Directory'}
-                    </h4>
-                    <p className="text-slate-400 text-[10px] sm:text-xs font-semibold leading-relaxed">
-                      {locale === 'ar' ? 'استعراض المسوقين النشطين ومراقبة إحصائياتهم.' : 'Browse active platform marketers and monitor their performance.'}
                     </p>
                   </div>
                 </Link>
