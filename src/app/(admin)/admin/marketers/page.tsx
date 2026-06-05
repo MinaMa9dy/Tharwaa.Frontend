@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useLocale } from '@/shared/context/LocaleContext';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { marketerService } from '@/features/marketers/api/marketerService';
 import { orderService } from '@/features/orders/api/orderService';
 import { withdrawalService } from '@/features/withdrawals/api/withdrawalService';
@@ -12,6 +14,17 @@ import { toast } from 'react-hot-toast';
 
 export default function AdminMarketersPage() {
   const { locale, dir } = useLocale();
+  const { user } = useAuthStore();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user?.role === 'Supervisor') {
+      router.replace('/admin/orders');
+    }
+  }, [user, router]);
+
+  if (user?.role === 'Supervisor') return null;
+
   const [marketers, setMarketers] = useState<MarketerDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');

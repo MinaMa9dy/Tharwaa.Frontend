@@ -1,13 +1,26 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useLocale } from '@/shared/context/LocaleContext';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { withdrawalService } from '@/features/withdrawals/api/withdrawalService';
 import { WithdrawalDto, WithdrawalStatus } from '@/shared/types/withdrawal';
 import { toast } from 'react-hot-toast';
 
 export default function AdminWithdrawalsPage() {
   const { locale, dir } = useLocale();
+  const { user } = useAuthStore();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user?.role === 'Supervisor') {
+      router.replace('/admin/orders');
+    }
+  }, [user, router]);
+
+  if (user?.role === 'Supervisor') return null;
+
   const [withdrawals, setWithdrawals] = useState<WithdrawalDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');

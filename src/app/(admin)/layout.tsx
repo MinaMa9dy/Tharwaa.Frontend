@@ -33,9 +33,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'إدارة الموردين', enName: 'Suppliers', path: '/admin/suppliers', roles: ['Admin'] },
     { name: 'إدارة المنتجات', enName: 'Products', path: '/admin/products', roles: ['Admin'] },
     { name: 'إدارة الأقسام', enName: 'Categories', path: '/admin/categories', roles: ['Admin'] },
-    { name: 'المسوقين والعملاء', enName: 'Marketers', path: '/admin/marketers', roles: ['Admin', 'Supervisor'] },
+    { name: 'المسوقين والعملاء', enName: 'Marketers', path: '/admin/marketers', roles: ['Admin'] },
     { name: 'طلبات الشحن', enName: 'Orders', path: '/admin/orders', roles: ['Admin', 'Supervisor'] },
-    { name: 'طلبات السحب', enName: 'Withdrawals', path: '/admin/withdrawals', roles: ['Admin', 'Supervisor'] },
+    { name: 'طلبات السحب', enName: 'Withdrawals', path: '/admin/withdrawals', roles: ['Admin'] },
     { name: 'الإعدادات العامة', enName: 'System Settings', path: '/admin/settings', roles: ['Admin'] },
   ];
 
