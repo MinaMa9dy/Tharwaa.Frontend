@@ -15,6 +15,11 @@ export default function MarketerLayout({ children }: { children: React.ReactNode
   const pathname = usePathname();
   const [balance, setBalance] = useState<number | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isMobileMenuOpen) {
@@ -122,7 +127,7 @@ export default function MarketerLayout({ children }: { children: React.ReactNode
             <div className="hidden sm:flex items-center gap-3 border-r border-slate-200 pr-3 sm:pr-4">
               <div className="flex flex-col text-left">
                 <span className="text-xs font-black text-slate-800">
-                  {user ? `${user.firstName} ${user.lastName}` : 'مسوق ثروة'}
+                  {mounted && user ? `${user.firstName} ${user.lastName}` : 'مسوق ثروة'}
                 </span>
                 <span className="text-[10px] text-slate-400 font-bold uppercase">
                   {locale === 'ar' ? 'مسوق' : 'Marketer'}
@@ -203,11 +208,11 @@ export default function MarketerLayout({ children }: { children: React.ReactNode
             )}
             <div className="flex items-center gap-3 p-2">
               <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-extrabold text-sm uppercase">
-                {user?.firstName?.[0] || 'M'}
+                {mounted && user?.firstName?.[0] || 'M'}
               </div>
               <div className="flex flex-col text-left">
                 <span className="text-sm font-bold text-slate-800">
-                  {user ? `${user.firstName} ${user.lastName}` : 'مسوق ثروة'}
+                  {mounted && user ? `${user.firstName} ${user.lastName}` : 'مسوق ثروة'}
                 </span>
                 <span className="text-xs text-slate-400 font-semibold">
                   {locale === 'ar' ? 'حساب مسوق' : 'Marketer Account'}

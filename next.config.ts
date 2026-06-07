@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
     '192.168.1.5',
     '*.local',
     '*.vercel.app',
-    'sstore.runasp.net'
+    ' Tharwaa-frontend.vercel.app'
   ],
   experimental: {
     serverActions: {
@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
         '192.168.1.5:3000',
         '192.168.1.5',
         '*.vercel.app',
-        'sstore.runasp.net'
+        ' Tharwaa-frontend.vercel.net'
       ]
     }
   }

@@ -11,6 +11,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { user, logout, initialize } = useAuthStore();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isMobileMenuOpen) {
@@ -39,9 +44,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'الإعدادات العامة', enName: 'System Settings', path: '/admin/settings', roles: ['Admin'] },
   ];
 
-  const visibleMenuItems = menuItems.filter(item => 
-    !user || item.roles.includes(user.role as any)
-  );
+  const visibleMenuItems = (!mounted || !user)
+    ? menuItems
+    : menuItems.filter(item => item.roles.includes(user.role as any));
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 text-slate-900" dir={dir}>
@@ -89,10 +94,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="hidden sm:flex items-center gap-3 pr-3 sm:pr-4">
               <div className="flex flex-col text-left">
                 <span className="text-xs font-black text-white">
-                  {user ? `${user.firstName} ${user.lastName}` : 'المدير العام'}
+                  {mounted && user ? `${user.firstName} ${user.lastName}` : 'المدير العام'}
                 </span>
                 <span className="text-[9px] text-primary font-extrabold uppercase tracking-wide">
-                  {user?.role || 'Admin'}
+                  {mounted && user?.role || 'Admin'}
                 </span>
               </div>
               <button
@@ -163,14 +168,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="space-y-4 border-t border-slate-800 pt-6">
               <div className="flex items-center gap-3 p-2">
                 <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-primary font-extrabold text-sm uppercase">
-                  {user?.firstName?.[0] || 'A'}
+                  {mounted && user?.firstName?.[0] || 'A'}
                 </div>
                 <div className="flex flex-col text-left">
                   <span className="text-sm font-bold text-white">
-                    {user ? `${user.firstName} ${user.lastName}` : 'المدير العام'}
+                    {mounted && user ? `${user.firstName} ${user.lastName}` : 'المدير العام'}
                   </span>
                   <span className="text-[10px] text-primary font-semibold tracking-wide uppercase">
-                    {user?.role || 'Admin'}
+                    {mounted && user?.role || 'Admin'}
                   </span>
                 </div>
               </div>
