@@ -1,22 +1,7 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
 import { env } from '@/shared/config/env';
-
-function decodeJwt(token: string) {
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-    return JSON.parse(jsonPayload);
-  } catch (e) {
-    return null;
-  }
-}
+import { decodeJwt } from '@/shared/utils/jwt';
 
 export async function POST(request: Request) {
   try {
@@ -54,13 +39,17 @@ export async function POST(request: Request) {
     
     const res = NextResponse.json({ success: true, user });
     
+    // Derive access token maxAge from the JWT exp claim
+    const now = Math.floor(Date.now() / 1000);
+    const accessTokenMaxAge = decoded?.exp ? decoded.exp - now : 15 * 60; // fallback: 15 min
+    
     // Set Access Token cookie
     res.cookies.set('access_token', accessToken, {
       httpOnly: true,
       secure: env.isProd,
       sameSite: 'strict',
       path: '/',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+      maxAge: accessTokenMaxAge,
     });
     
     // Set Refresh Token cookie

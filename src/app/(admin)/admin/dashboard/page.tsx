@@ -121,8 +121,8 @@ export default function AdminDashboardPage() {
             <p className="text-slate-300 text-xs sm:text-base font-semibold max-w-2xl leading-relaxed">
               {user.role === 'Supervisor'
                 ? (locale === 'ar'
-                  ? 'بصفتك مشرفاً على المنصة، يمكنك متابعة طلبات الشحن وتدقيق عمليات السحب وإدارة حسابات المسوقين لتيسير العمل اليومي.'
-                  : 'As a system Supervisor, you can manage shipping orders, review marketer payouts, and keep the platform running smoothly.')
+                  ? 'بصفتك مشرفاً على المنصة، يمكنك متابعة طلبات الشحن وتحديث حالات التوصيل وإدارة المهام اليومية.'
+                  : 'As a system Supervisor, you can manage shipping orders, update delivery statuses, and keep operations running smoothly.')
                 : (locale === 'ar'
                   ? 'بصفتك مورداً للمنصة، يمكنك إدارة منتجاتك ومتابعة الطلبات الجارية لتجهيز الشحنات بكفاءة وسرعة.'
                   : 'As a Supplier, you can manage your catalog and process incoming product orders.')}

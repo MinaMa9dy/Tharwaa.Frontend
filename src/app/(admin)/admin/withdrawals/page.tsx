@@ -234,7 +234,7 @@ export default function AdminWithdrawalsPage() {
                 setCurrentPage(p => p + 1);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              disabled={currentPage >= totalPages}
+              disabled={currentPage >= totalPages || totalPages === 0}
               className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-extrabold text-xs sm:text-sm disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
             >
               {locale === 'ar' ? '⬅️ الصفحة التالية' : 'Next ➡️'}

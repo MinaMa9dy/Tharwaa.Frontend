@@ -2,6 +2,19 @@ import { create } from 'zustand';
 import { UserDto, LoginDto, RegisterDto } from '@/shared/types/auth';
 import axios from 'axios';
 
+// ─── Synchronous hydration from localStorage ────────────────────────────────
+// Run BEFORE any component renders so `user` is never null on first render.
+function loadUserFromStorage(): UserDto | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const stored = localStorage.getItem('user');
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    localStorage.removeItem('user');
+    return null;
+  }
+}
+
 interface AuthState {
   user: UserDto | null;
   loading: boolean;
@@ -11,11 +24,11 @@ interface AuthState {
   googleLogin: (token: string) => Promise<void>;
   register: (dto: RegisterDto) => Promise<void>;
   logout: () => Promise<void>;
-  initialize: () => void;
+  initialize: () => void; // kept for backward compat, now a no-op
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
+  user: loadUserFromStorage(), // ✅ Synchronous — no race condition
   loading: false,
   error: null,
   setUser: (user) => set({ user }),
@@ -92,21 +105,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user: null, loading: false });
     if (typeof window !== 'undefined') {
       localStorage.removeItem('user');
-      // Force reload to clear all states and caches
       window.location.href = '/login';
     }
   },
   
-  initialize: () => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('user');
-      if (stored) {
-        try {
-          set({ user: JSON.parse(stored) });
-        } catch (e) {
-          localStorage.removeItem('user');
-        }
-      }
-    }
-  },
+  // Kept for backward compatibility — no-op since hydration is now synchronous
+  initialize: () => {},
 }));

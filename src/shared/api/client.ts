@@ -28,6 +28,14 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue = [];
 };
 
+// ✅ Reset the refresh-failed flag after 10s so the user can retry
+// (e.g. after a brief network blip — avoids permanently locking the user out)
+function scheduleRefreshFailedReset() {
+  setTimeout(() => {
+    isRefreshFailed = false;
+  }, 10_000);
+}
+
 // Response Interceptor for handling expired tokens via silent refresh
 apiClient.interceptors.response.use(
   (response) => response,
@@ -71,6 +79,7 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         isRefreshing = false;
         isRefreshFailed = true;
+        scheduleRefreshFailedReset(); // ✅ Auto-reset after 10s
         processQueue(refreshError);
         
         // Clear auth store and redirect to login if refresh fails

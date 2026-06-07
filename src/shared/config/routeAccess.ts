@@ -17,9 +17,9 @@ export const ROUTE_ACCESS: Record<string, Role[]> = {
   '/admin/settings': ['Admin'],
 
   // Shared Admin and Supervisor management panels
-  '/admin/marketers': ['Admin', 'Supervisor'],
-  '/admin/orders': ['Admin', 'Supervisor', 'Supplier'],
-  '/admin/withdrawals': ['Admin', 'Supervisor'],
+  '/admin/marketers': ['Admin'],
+  '/admin/orders': ['Admin', 'Supervisor'],
+  '/admin/withdrawals': ['Admin'],
   '/admin/products': ['Admin', 'Supplier'],
   '/admin/categories': ['Admin', 'Supplier'],
 

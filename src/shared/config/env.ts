@@ -9,5 +9,8 @@ export const env = {
   cookieSecret: process.env.COOKIE_SECRET || 'dev-cookie-secret-change-in-prod-12345',
 } as const;
 
-// Disable SSL/TLS verification rejection to allow self-signed or Let's Encrypt certificates
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+// ✅ Disable SSL/TLS verification only in non-production (dev/staging)
+// In production, SSL must be verified for security.
+if (process.env.NEXT_PUBLIC_APP_ENV !== 'production') {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}

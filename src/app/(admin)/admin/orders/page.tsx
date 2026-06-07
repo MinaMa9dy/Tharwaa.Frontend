@@ -24,7 +24,6 @@ export default function AdminOrdersPage() {
   // Supervisor tabs: 'available' = unconfirmed orders, 'my' = supervisor's own orders
   const [supervisorTab, setSupervisorTab] = useState<'available' | 'my'>('available');
 
-  const filteredOrders = orders;
 
   const loadOrders = async () => {
     setIsLoading(true);
@@ -68,7 +67,7 @@ export default function AdminOrdersPage() {
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, statusFilter, currentPage, supervisorTab]);
+  }, [user, searchQuery, statusFilter, currentPage, supervisorTab]);
 
   const handleConfirmOrder = async (id: number) => {
     try {
@@ -219,13 +218,13 @@ export default function AdminOrdersPage() {
               ? (locale === 'ar' ? 'لا توجد طلبات مُعيَّنة لك بعد' : 'No orders assigned to you yet')
               : (locale === 'ar' ? 'لا توجد طلبات حالياً' : 'No orders found')}
           </div>
-        ) : filteredOrders.length === 0 ? (
+        ) : orders.length === 0 ? (
           <div className="p-10 text-center text-sm font-bold text-slate-400">
             {locale === 'ar' ? 'لا توجد نتائج تطابق بحثك' : 'No matches found for your search'}
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
-            {filteredOrders.map((order) => (
+            {orders.map((order) => (
               <div key={order.id} className="p-5 sm:p-6 flex flex-col justify-between items-stretch gap-6">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                   <div className="space-y-1.5 flex-1 text-right">
@@ -398,7 +397,7 @@ export default function AdminOrdersPage() {
                 setCurrentPage(p => p + 1);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              disabled={currentPage >= totalPages}
+              disabled={currentPage >= totalPages || totalPages === 0}
               className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-extrabold text-xs sm:text-sm disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
             >
               {locale === 'ar' ? '⬅️ الصفحة التالية' : 'Next ➡️'}
