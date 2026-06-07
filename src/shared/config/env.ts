@@ -1,5 +1,5 @@
 export const env = {
-  apiUrl: process.env.NEXT_PUBLIC_API_URL || 'https://sstore.runasp.net/api',
+  apiUrl: process.env.NEXT_PUBLIC_API_URL || 'https://Tharwaa.runasp.net/api',
   appUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
   googleClientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
   isDev: process.env.NEXT_PUBLIC_APP_ENV === 'development',
