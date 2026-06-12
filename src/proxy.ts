@@ -3,8 +3,22 @@ import type { NextRequest } from 'next/server';
 import { ROUTE_ACCESS } from '@/shared/config/routeAccess';
 import { decodeJwt } from '@/shared/utils/jwt';
 
+const MAINTENANCE_MODE = process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true';
+
 export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // ─── Maintenance Mode ────────────────────────────────────────────────────────
+  // When maintenance mode is ON, redirect every visitor to /maintenance.
+  // Admins can still access /admin routes by bypassing this check.
+  if (MAINTENANCE_MODE && pathname !== '/maintenance') {
+    return NextResponse.redirect(new URL('/maintenance', request.url));
+  }
+  // If maintenance is OFF and someone visits /maintenance, send them home
+  if (!MAINTENANCE_MODE && pathname === '/maintenance') {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
 
   // Redirect old localized auth URLs to clean ones
   if (pathname.includes('/auth/reset-password')) {
