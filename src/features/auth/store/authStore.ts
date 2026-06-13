@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { UserDto, LoginDto, RegisterDto } from '@/shared/types/auth';
 import axios from 'axios';
+import { track } from '@vercel/analytics';
 
 // ─── Synchronous hydration from localStorage ────────────────────────────────
 // Run BEFORE any component renders so `user` is never null on first render.
@@ -43,6 +44,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         if (typeof window !== 'undefined') {
           localStorage.setItem('user', JSON.stringify(user));
         }
+        track('login', { method: 'email', role: user.role });
       } else {
         const message = response.data.message || 'فشلت عملية تسجيل الدخول';
         set({ error: message, loading: false });
@@ -65,6 +67,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         if (typeof window !== 'undefined') {
           localStorage.setItem('user', JSON.stringify(user));
         }
+        track('login', { method: 'google', role: user.role });
       } else {
         const message = response.data.message || 'فشلت عملية تسجيل الدخول بواسطة جوجل';
         set({ error: message, loading: false });
@@ -83,6 +86,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const response = await axios.post('/api/proxy/Auth/register', dto);
       if (response.data.success) {
         set({ loading: false });
+        track('register', { method: 'email' });
       } else {
         const message = response.data.message || 'فشلت عملية التسجيل';
         set({ error: message, loading: false });
@@ -102,6 +106,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (e) {
       // Ignore network errors on logout
     }
+    track('logout');
     set({ user: null, loading: false });
     if (typeof window !== 'undefined') {
       localStorage.removeItem('user');

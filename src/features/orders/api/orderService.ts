@@ -1,6 +1,7 @@
 import { apiClient } from '@/shared/api/client';
 import { ApiResult } from '@/shared/types/api';
 import { OrderDto, CreateOrderDto, CancelOrderDto, OrderStatus, OrderItemDto } from '@/shared/types/order';
+import { track } from '@vercel/analytics';
 
 export const orderService = {
   async getGovernorates(): Promise<ApiResult<{ id: number; name: string; nameAr: string }[]>> {
@@ -29,6 +30,9 @@ export const orderService = {
 
   async create(dto: CreateOrderDto): Promise<ApiResult<OrderDto>> {
     const response = await apiClient.post<ApiResult<OrderDto>>('/Orders', dto);
+    if (response.data.success && response.data.data) {
+      track('order_placed', { orderId: response.data.data.id });
+    }
     return response.data;
   },
 

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { CartDto, CartItemDto } from '@/shared/types/cart';
 import { cartService } from '../api/cartService';
+import { track } from '@vercel/analytics';
 
 interface CartState {
   cart: CartDto | null;
@@ -76,6 +77,12 @@ export const useCartStore = create<CartState>((set, get) => ({
       if (res.success && res.data) {
         // Sync with real server data
         set({ cart: res.data, loading: false });
+        track('add_to_cart', {
+          productId,
+          variantId: finalVariantId,
+          quantity,
+          price: sellingPrice,
+        });
       } else {
         // Revert on failure
         if (previousCart) set({ cart: previousCart });
@@ -129,6 +136,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       const res = await cartService.removeFromCart(itemId);
       if (res.success && res.data) {
         set({ cart: res.data });
+        track('remove_from_cart', { itemId });
       } else {
         // Revert on failure
         set({ cart: previousCart, error: res.message });
@@ -148,6 +156,7 @@ export const useCartStore = create<CartState>((set, get) => ({
 
     try {
       await cartService.clearCart();
+      track('clear_cart');
     } catch (err: any) {
       // Revert on error
       set({ cart: previousCart, error: err.message });

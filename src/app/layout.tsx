@@ -4,6 +4,8 @@ import "./globals.css";
 import { LocaleProvider } from "@/shared/context/LocaleContext";
 
 import { Toaster } from 'react-hot-toast';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +42,8 @@ export default function RootLayout({
         <LocaleProvider>
           <Toaster position="top-center" reverseOrder={false} />
           {children}
+          <Analytics />
+          <SpeedInsights />
         </LocaleProvider>
       </body>
     </html>
