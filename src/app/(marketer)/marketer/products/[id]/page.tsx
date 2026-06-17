@@ -19,6 +19,7 @@ export default function ProductDetailsPage() {
   const [product, setProduct] = useState<ProductDto | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<ProductDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRelatedLoading, setIsRelatedLoading] = useState(false);
 
   // Variant selector states
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
@@ -30,11 +31,13 @@ export default function ProductDetailsPage() {
 
   useEffect(() => {
     if (!id) return;
+    let active = true;
 
     const loadProductData = async () => {
       setIsLoading(true);
       try {
         const res = await productService.getById(id);
+        if (!active) return;
         if (res.success && res.data) {
           const prod = res.data;
           setProduct(prod);
@@ -59,26 +62,46 @@ export default function ProductDetailsPage() {
             setPriceToSell(prod.price || 0);
           }
 
-          // Load related products
+          // Main product data loaded, show details immediately
+          setIsLoading(false);
+
+          // Load related products in the background asynchronously
           if (prod.categoryId) {
-            const relRes = await productService.getAll({ categoryId: prod.categoryId, pageSize: 5 });
-            if (relRes.success && relRes.data) {
-              const list = Array.isArray(relRes.data) ? relRes.data : ((relRes.data as any).items || []);
-              const filtered = list.filter((p: ProductDto) => p.id !== prod.id).slice(0, 4);
-              setRelatedProducts(filtered);
-            }
+            setIsRelatedLoading(true);
+            productService.getAll({ categoryId: prod.categoryId, pageSize: 5 })
+              .then((relRes) => {
+                if (!active) return;
+                if (relRes.success && relRes.data) {
+                  const list = Array.isArray(relRes.data) ? relRes.data : ((relRes.data as any).items || []);
+                  const filtered = list.filter((p: ProductDto) => p.id !== prod.id).slice(0, 4);
+                  setRelatedProducts(filtered);
+                }
+              })
+              .catch((err) => {
+                console.error('Failed to load related products', err);
+              })
+              .finally(() => {
+                if (active) {
+                  setIsRelatedLoading(false);
+                }
+              });
           }
         } else {
           toast.error(locale === 'ar' ? 'فشل تحميل المنتج' : 'Failed to load product');
+          setIsLoading(false);
         }
       } catch (err: any) {
+        if (!active) return;
         toast.error(locale === 'ar' ? 'حدث خطأ في تحميل البيانات' : 'Error loading product details');
-      } finally {
         setIsLoading(false);
       }
     };
 
     loadProductData();
+
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   // Match attributes map to variants list
@@ -90,50 +113,68 @@ export default function ProductDetailsPage() {
   };
 
   const handleAttributeChange = (name: string, value: string) => {
-    if (!product?.variants) return;
+    if (!product?.variants || product.variants.length === 0) return;
     
-    const attrNames = Object.keys(getAttributeOptions());
-    const currentIndex = attrNames.indexOf(name);
-    
-    // Copy current selection
+    // Copy current selection and update the changed attribute
     const updated = { ...selectedAttributes };
     updated[name] = value;
     
-    // For all attributes after the changed one, check if their current selection is valid
-    for (let i = currentIndex + 1; i < attrNames.length; i++) {
-      const currentName = attrNames[i];
-      const currentlySelectedValue = updated[currentName];
+    // 1. Try to find a variant that matches the new combination exactly
+    let match = product.variants.find((v) => {
+      return v.attributes.every((attr) => updated[attr.name] === attr.value);
+    });
+    
+    // 2. If no exact match is found, find a candidate variant with the clicked attribute value
+    // that matches as many of the other currently selected attributes as possible.
+    if (!match) {
+      const candidates = product.variants.filter((v) => {
+        return v.attributes.some((attr) => attr.name === name && attr.value === value);
+      });
       
-      if (currentlySelectedValue) {
-        // Build partial selection up to index i
-        const partial: Record<string, string> = {};
-        for (let j = 0; j < i; j++) {
-          if (updated[attrNames[j]]) {
-            partial[attrNames[j]] = updated[attrNames[j]];
-          }
-        }
-        partial[currentName] = currentlySelectedValue;
+      if (candidates.length > 0) {
+        let bestCandidate = candidates[0];
+        let maxScore = -1;
         
-        // Check if there's any variant with this partial combination
-        const isValid = product.variants.some((v) => {
-          return Object.entries(partial).every(([n, val]) => {
-            return v.attributes.some((attr) => attr.name === n && attr.value === val);
+        candidates.forEach((v) => {
+          let score = 0;
+          v.attributes.forEach((attr) => {
+            if (attr.name !== name && selectedAttributes[attr.name] === attr.value) {
+              score++;
+            }
           });
+          if (score > maxScore) {
+            maxScore = score;
+            bestCandidate = v;
+          }
         });
         
-        if (!isValid) {
-          // If not valid, clear it to force user to choose another one
-          delete updated[currentName];
-        }
+        match = bestCandidate;
       }
     }
     
-    setSelectedAttributes(updated);
-    const match = findMatchingVariant(updated);
-    setSelectedVariant(match);
     if (match) {
+      // Synchronize selection state to match the found variant's attributes exactly
+      const syncedAttrs: Record<string, string> = {};
+      match.attributes.forEach((attr) => {
+        syncedAttrs[attr.name] = attr.value;
+      });
+      setSelectedAttributes(syncedAttrs);
+      setSelectedVariant(match);
       setPriceToSell(match.price);
     }
+  };
+
+  const isOptionAvailable = (attrName: string, val: string) => {
+    if (!product?.variants) return false;
+    
+    // Create a copy of current selection but override the tested attribute
+    const testSelection = { ...selectedAttributes };
+    testSelection[attrName] = val;
+    
+    // An option matches if there is any variant matching this modified selection
+    return product.variants.some((v) => {
+      return v.attributes.every((attr) => testSelection[attr.name] === attr.value);
+    });
   };
 
   const handleAddToCart = async () => {
@@ -171,30 +212,7 @@ export default function ProductDetailsPage() {
     }
   };
 
-  const isOptionAvailable = (attrName: string, val: string) => {
-    if (!product?.variants) return false;
-    
-    // Get all attributes in their rendering order
-    const attrNames = Object.keys(getAttributeOptions());
-    const currentIndex = attrNames.indexOf(attrName);
-    
-    // Build a hypothetical selection containing only selections of preceding attributes + this val
-    const hypothetical: Record<string, string> = {};
-    for (let i = 0; i < currentIndex; i++) {
-      const prevName = attrNames[i];
-      if (selectedAttributes[prevName]) {
-        hypothetical[prevName] = selectedAttributes[prevName];
-      }
-    }
-    hypothetical[attrName] = val;
-    
-    // Check if there is at least one variant that matches this partial combination
-    return product.variants.some((v) => {
-      return Object.entries(hypothetical).every(([name, value]) => {
-        return v.attributes.some((attr) => attr.name === name && attr.value === value);
-      });
-    });
-  };
+
 
   // Group attributes by name to get list of unique values
   const getAttributeOptions = () => {
@@ -211,9 +229,69 @@ export default function ProductDetailsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4 animate-pulse">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        <span className="text-sm font-bold text-slate-400">{locale === 'ar' ? 'جاري تحميل تفاصيل المنتج...' : 'Loading product...'}</span>
+      <div className="space-y-12 animate-pulse" dir={dir}>
+        {/* Breadcrumb Skeleton */}
+        <div className="flex items-center justify-start gap-2">
+          <div className="w-16 h-4 bg-slate-200 rounded" />
+          <span>/</span>
+          <div className="w-24 h-4 bg-slate-200 rounded" />
+        </div>
+
+        {/* Main product card Skeleton */}
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-2 gap-8 p-6 md:p-8">
+          {/* Gallery column */}
+          <div className="space-y-4">
+            <div className="aspect-square w-full rounded-2xl bg-slate-100" />
+            <div className="flex gap-3">
+              <div className="w-16 h-16 rounded-xl bg-slate-100 shrink-0" />
+              <div className="w-16 h-16 rounded-xl bg-slate-100 shrink-0" />
+              <div className="w-16 h-16 rounded-xl bg-slate-100 shrink-0" />
+            </div>
+          </div>
+
+          {/* Info Column */}
+          <div className="flex flex-col justify-between space-y-6 text-right">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <div className="w-24 h-6 bg-slate-200 rounded-full" />
+                <div className="w-20 h-6 bg-slate-200 rounded-full" />
+              </div>
+              <div className="h-8 bg-slate-200 rounded w-3/4 mr-auto md:mr-0" />
+              <div className="h-4 bg-slate-200 rounded w-1/4 mr-auto md:mr-0" />
+              <div className="space-y-2 border-t border-slate-100 pt-4">
+                <div className="h-4 bg-slate-200 rounded w-full" />
+                <div className="h-4 bg-slate-200 rounded w-5/6" />
+                <div className="h-4 bg-slate-200 rounded w-4/6" />
+              </div>
+            </div>
+
+            <div className="space-y-5 border-t border-slate-100 pt-5">
+              <div className="space-y-2">
+                <div className="h-4 bg-slate-200 rounded w-12 mr-auto md:mr-0" />
+                <div className="flex gap-2 justify-start">
+                  <div className="w-16 h-8 bg-slate-100 rounded-xl" />
+                  <div className="w-16 h-8 bg-slate-100 rounded-xl" />
+                </div>
+              </div>
+              <div className="flex items-center gap-4 justify-start">
+                <div className="w-12 h-4 bg-slate-200 rounded" />
+                <div className="w-32 h-10 bg-slate-100 rounded-xl" />
+              </div>
+              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/50 space-y-4">
+                <div className="flex justify-between items-center">
+                  <div className="w-16 h-4 bg-slate-200 rounded" />
+                  <div className="w-32 h-4 bg-slate-200 rounded" />
+                </div>
+                <div className="h-12 bg-slate-200 rounded-xl w-full" />
+                <div className="flex justify-between items-center border-t border-slate-200 pt-3">
+                  <div className="w-16 h-4 bg-slate-200 rounded" />
+                  <div className="w-32 h-4 bg-slate-200 rounded" />
+                </div>
+              </div>
+              <div className="h-14 bg-slate-200 rounded-2xl w-full" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -325,14 +403,13 @@ export default function ProductDetailsPage() {
                     return (
                       <button
                         key={val}
-                        disabled={!isAvailable}
                         onClick={() => handleAttributeChange(attrName, val)}
-                        className={`px-4 py-2 rounded-xl text-xs font-black border transition-all relative ${
+                        className={`px-4 py-2 rounded-xl text-xs font-black border transition-all relative cursor-pointer ${
                           isSelected
-                            ? 'bg-primary text-white border-primary shadow-sm cursor-pointer'
+                            ? 'bg-primary text-white border-primary shadow-sm'
                             : !isAvailable
-                            ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed opacity-50'
-                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 cursor-pointer'
+                            ? 'bg-slate-50 text-slate-400/80 border-slate-200/60 opacity-60'
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
                         }`}
                       >
                         {val}
@@ -422,7 +499,7 @@ export default function ProductDetailsPage() {
       </div>
 
       {/* Related Products Section */}
-      {relatedProducts.length > 0 && (
+      {(isRelatedLoading || relatedProducts.length > 0) && (
         <div className="space-y-6">
           <div className="text-right border-b border-slate-200 pb-3">
             <h2 className="text-lg sm:text-xl font-black text-slate-800">
@@ -433,44 +510,57 @@ export default function ProductDetailsPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-            {relatedProducts.map((prod) => {
-              const mainImg = prod.files.find((f) => f.isMain)?.url || prod.files[0]?.url || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=600&q=80';
-              return (
-                <Link
-                  key={prod.id}
-                  href={`/marketer/products/${prod.id}`}
-                  className="group bg-white rounded-2xl border border-slate-200 hover:border-primary/30 overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-300 text-right"
-                >
-                  <div className="relative aspect-square w-full bg-slate-50 overflow-hidden">
-                    <img
-                      src={mainImg}
-                      alt={prod.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  </div>
-
-                  <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between space-y-2">
-                    <div className="space-y-0.5">
-                      <span className="text-[8px] sm:text-[9px] font-black text-primary/80 uppercase">
-                        {prod.categoryName || (locale === 'ar' ? 'تصنيف عام' : 'General')}
-                      </span>
-                      <h3 className="text-xs sm:text-sm font-black text-slate-800 line-clamp-1 group-hover:text-primary transition-colors">
-                        {locale === 'ar' ? prod.name : prod.nameEn || prod.name}
-                      </h3>
+          {isRelatedLoading ? (
+            <div className="flex overflow-x-auto pb-4 gap-4 scrollbar-none snap-x snap-mandatory lg:grid lg:grid-cols-4 lg:gap-6 lg:overflow-visible lg:pb-0">
+              {[1, 2, 3, 4].map((n) => (
+                <div key={n} className="w-[70%] sm:w-[45%] lg:w-auto shrink-0 snap-start bg-white rounded-xl sm:rounded-2xl border border-slate-200 p-3 sm:p-4 space-y-3 sm:space-y-4 animate-pulse">
+                  <div className="aspect-square w-full rounded-xl bg-slate-100" />
+                  <div className="h-4 bg-slate-100 rounded w-2/3 mr-auto md:mr-0" />
+                  <div className="h-3 bg-slate-100 rounded w-full mr-auto md:mr-0" />
+                  <div className="h-6 bg-slate-100 rounded w-1/3 mr-auto md:mr-0" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex overflow-x-auto pb-4 gap-4 scrollbar-none snap-x snap-mandatory lg:grid lg:grid-cols-4 lg:gap-6 lg:overflow-visible lg:pb-0">
+              {relatedProducts.map((prod) => {
+                const mainImg = prod.files.find((f) => f.isMain)?.url || prod.files[0]?.url || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=600&q=80';
+                return (
+                  <Link
+                    key={prod.id}
+                    href={`/marketer/products/${prod.id}`}
+                    className="w-[70%] sm:w-[45%] lg:w-auto shrink-0 snap-start group bg-white rounded-2xl border border-slate-200 hover:border-primary/30 overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-300 text-right"
+                  >
+                    <div className="relative aspect-square w-full bg-slate-50 overflow-hidden">
+                      <img
+                        src={mainImg}
+                        alt={prod.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
                     </div>
 
-                    <div className="flex justify-between items-center text-xs font-extrabold text-slate-800 pt-1 border-t border-slate-100">
-                      <span>{prod.price} ج.م</span>
-                      <span className="text-[10px] text-slate-400 font-bold">
-                        {locale === 'ar' ? 'سعر الجملة' : 'Wholesale'}
-                      </span>
+                    <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between space-y-2">
+                      <div className="space-y-0.5">
+                        <span className="text-[8px] sm:text-[9px] font-black text-primary/80 uppercase">
+                          {prod.categoryName || (locale === 'ar' ? 'تصنيف عام' : 'General')}
+                        </span>
+                        <h3 className="text-xs sm:text-sm font-black text-slate-800 line-clamp-1 group-hover:text-primary transition-colors">
+                          {locale === 'ar' ? prod.name : prod.nameEn || prod.name}
+                        </h3>
+                      </div>
+
+                      <div className="flex justify-between items-center text-xs font-extrabold text-slate-800 pt-1 border-t border-slate-100">
+                        <span>{prod.price} ج.م</span>
+                        <span className="text-[10px] text-slate-400 font-bold">
+                          {locale === 'ar' ? 'سعر الجملة' : 'Wholesale'}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
