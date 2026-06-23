@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLocale } from '@/shared/context/LocaleContext';
+import { CloseIcon } from '@/shared/components/Icons';
+
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useCartStore } from '@/features/cart/store/cartStore';
 import { marketerService } from '@/features/marketers/api/marketerService';
@@ -178,9 +180,9 @@ export default function MarketerLayout({ children }: { children: React.ReactNode
               </div>
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:text-slate-700 text-sm font-bold"
+                className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:text-slate-700"
               >
-                ✕
+                <CloseIcon className="w-4 h-4" />
               </button>
             </div>
             <nav className="flex flex-col gap-4 text-base font-bold text-slate-700">

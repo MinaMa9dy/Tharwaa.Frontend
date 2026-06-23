@@ -9,12 +9,22 @@ import { cartService } from '@/features/cart/api/cartService';
 import { useCartStore } from '@/features/cart/store/cartStore';
 import { ProductDto } from '@/shared/types/product';
 import { toast } from 'react-hot-toast';
+import { env } from '@/shared/config/env';
+import { SearchIcon, CartIcon } from '@/shared/components/Icons';
 
 export default function ProductDetailsPage() {
   const { id } = useParams() as { id: string };
   const router = useRouter();
   const { locale, dir } = useLocale();
   const { addItem } = useCartStore();
+
+  const getImageUrl = (url?: string) => {
+    if (!url) return 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=600&q=80';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    const apiBase = env.apiUrl.replace(/\/api$/, '');
+    const cleanUrl = url.startsWith('/') ? url.slice(1) : url;
+    return `${apiBase}/${cleanUrl}`;
+  };
 
   const [product, setProduct] = useState<ProductDto | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<ProductDto[]>([]);
@@ -299,7 +309,9 @@ export default function ProductDetailsPage() {
   if (!product) {
     return (
       <div className="text-center p-12 bg-white rounded-3xl border border-slate-200">
-        <span className="text-5xl">🔍</span>
+        <div className="flex justify-center mb-4">
+          <SearchIcon className="w-14 h-14 text-slate-300" />
+        </div>
         <h2 className="text-xl font-black text-slate-800 mt-4">{locale === 'ar' ? 'المنتج غير موجود' : 'Product Not Found'}</h2>
         <p className="text-slate-400 text-sm font-bold mt-2">{locale === 'ar' ? 'ربما تم حذفه أو تعطيله.' : 'This product may have been removed.'}</p>
         <Link href="/marketer/products" className="inline-block mt-5 px-6 py-2.5 bg-primary text-white rounded-xl font-bold text-sm shadow">
@@ -324,7 +336,7 @@ export default function ProductDetailsPage() {
         </Link>
         <span>/</span>
         <span className="text-slate-600">
-          {locale === 'ar' ? product.name : product.nameEn || product.name}
+          {product.name}
         </span>
       </div>
 
@@ -335,7 +347,7 @@ export default function ProductDetailsPage() {
         <div className="space-y-4">
           <div className="aspect-square w-full rounded-2xl bg-slate-50 border border-slate-100 overflow-hidden relative shadow-inner">
             <img
-              src={activePhotoUrl}
+              src={getImageUrl(activePhotoUrl)}
               alt={product.name}
               className="w-full h-full object-cover"
             />
@@ -351,7 +363,7 @@ export default function ProductDetailsPage() {
                     activePhotoUrl === file.url ? 'border-primary shadow' : 'border-slate-200 opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <img src={file.url} alt="" className="w-full h-full object-cover" />
+                  <img src={getImageUrl(file.url)} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
@@ -377,7 +389,7 @@ export default function ProductDetailsPage() {
             </div>
 
             <h1 className="text-xl sm:text-3xl font-black text-slate-800 leading-tight">
-              {locale === 'ar' ? product.name : product.nameEn || product.name}
+              {product.name}
             </h1>
 
             {currentSku && (
@@ -387,7 +399,7 @@ export default function ProductDetailsPage() {
             )}
 
             <p className="text-xs sm:text-sm text-slate-500 font-bold leading-relaxed border-t border-slate-100 pt-4">
-              {locale === 'ar' ? product.description : product.descriptionEn || product.description}
+              {product.description}
             </p>
           </div>
 
@@ -489,7 +501,7 @@ export default function ProductDetailsPage() {
                 </>
               ) : (
                 <>
-                  <span>🛒</span>
+                  <CartIcon className="w-5 h-5 text-white" />
                   <span>{locale === 'ar' ? 'إضافة إلى سلة البيع' : 'Add to Sales Cart'}</span>
                 </>
               )}
@@ -533,7 +545,7 @@ export default function ProductDetailsPage() {
                   >
                     <div className="relative aspect-square w-full bg-slate-50 overflow-hidden">
                       <img
-                        src={mainImg}
+                        src={getImageUrl(mainImg)}
                         alt={prod.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
@@ -545,7 +557,7 @@ export default function ProductDetailsPage() {
                           {prod.categoryName || (locale === 'ar' ? 'تصنيف عام' : 'General')}
                         </span>
                         <h3 className="text-xs sm:text-sm font-black text-slate-800 line-clamp-1 group-hover:text-primary transition-colors">
-                          {locale === 'ar' ? prod.name : prod.nameEn || prod.name}
+                          {prod.name}
                         </h3>
                       </div>
 

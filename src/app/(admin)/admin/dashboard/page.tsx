@@ -4,18 +4,45 @@ import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLocale } from '@/shared/context/LocaleContext';
 import { useAuthStore } from '@/features/auth/store/authStore';
+import { env } from '@/shared/config/env';
 import { dashboardService } from '@/features/dashboard/api/dashboardService';
 import { DashboardStatsDto, TopMarketerDto, TopProductDto, SalesPeriodDto } from '@/shared/types/dashboard';
+import {
+  TrophyIcon,
+  TrendingUpIcon,
+  PackageIcon,
+  TagIcon,
+  WalletIcon,
+  UsersIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  CloseIcon,
+  CheckIcon,
+  TruckIcon,
+  WarningIcon
+} from '@/shared/components/Icons';
 
 export default function AdminDashboardPage() {
   const { locale, dir } = useLocale();
   const { user } = useAuthStore();
+
+  const getImageUrl = (url?: string) => {
+    if (!url) return 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=80&q=80';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    const apiBase = env.apiUrl.replace(/\/api$/, '');
+    const cleanUrl = url.startsWith('/') ? url.slice(1) : url;
+    return `${apiBase}/${cleanUrl}`;
+  };
   const [stats, setStats] = useState<DashboardStatsDto>({
     totalMarketers: 0,
     totalOrders: 0,
     pendingOrders: 0,
+    confirmedOrders: 0,
+    shippedOrders: 0,
     deliveredOrders: 0,
     cancelledOrders: 0,
+    confirmationFailedOrders: 0,
+    deliveryFailedOrders: 0,
     totalWithdrawals: 0,
     pendingWithdrawals: 0
   });
@@ -29,6 +56,11 @@ export default function AdminDashboardPage() {
   const [groupPeriod, setGroupPeriod] = useState<'day' | 'week' | 'month'>('day');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Close dropdown on outside click/tap (works on both desktop and mobile)
   useEffect(() => {
@@ -105,6 +137,21 @@ export default function AdminDashboardPage() {
     loadSales();
   }, [user, fromDateStr, toDateStr]);
 
+  // Wait for client hydration before rendering user-role-dependent content
+  if (!mounted) {
+    return (
+      <div className="space-y-8 animate-pulse" dir={dir}>
+        <div className="h-10 bg-slate-100 rounded-2xl w-1/3" />
+        <div className="h-4 bg-slate-100 rounded-xl w-1/2" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-28 bg-slate-100 rounded-3xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (user && user.role !== 'Admin') {
     return (
       <div className="space-y-8 animate-fadeIn" dir={dir}>
@@ -115,8 +162,8 @@ export default function AdminDashboardPage() {
             </span>
             <h1 className="text-2xl sm:text-4xl font-black">
               {locale === 'ar'
-                ? `مرحباً بك مجدداً، ${user.firstName} 👋`
-                : `Welcome back, ${user.firstName} 👋`}
+                ? `مرحباً بك مجدداً، ${user.firstName}`
+                : `Welcome back, ${user.firstName}`}
             </h1>
             <p className="text-slate-300 text-xs sm:text-base font-semibold max-w-2xl leading-relaxed">
               {user.role === 'Supervisor'
@@ -142,7 +189,9 @@ export default function AdminDashboardPage() {
                   href="/admin/orders"
                   className="bg-white hover:bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all text-right flex flex-col justify-between space-y-3 sm:space-y-4 group"
                 >
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg sm:text-xl font-bold group-hover:scale-110 transition-transform">📦</div>
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <PackageIcon className="w-5 h-5 sm:w-6 h-6" />
+                  </div>
                   <div className="space-y-1">
                     <h4 className="font-black text-slate-800 text-xs sm:text-base">
                       {locale === 'ar' ? 'إدارة طلبات الشحن' : 'Manage Orders'}
@@ -161,7 +210,9 @@ export default function AdminDashboardPage() {
                   href="/admin/products"
                   className="bg-white hover:bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all text-right flex flex-col justify-between space-y-3 sm:space-y-4 group"
                 >
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-lg sm:text-xl font-bold group-hover:scale-110 transition-transform">🏷️</div>
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <TagIcon className="w-5 h-5 sm:w-6 h-6" />
+                  </div>
                   <div className="space-y-1">
                     <h4 className="font-black text-slate-800 text-xs sm:text-base">
                       {locale === 'ar' ? 'إدارة كتالوج المنتجات' : 'Products Catalog'}
@@ -176,7 +227,9 @@ export default function AdminDashboardPage() {
                   href="/admin/orders"
                   className="bg-white hover:bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all text-right flex flex-col justify-between space-y-3 sm:space-y-4 group"
                 >
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg sm:text-xl font-bold group-hover:scale-110 transition-transform">📦</div>
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <PackageIcon className="w-5 h-5 sm:w-6 h-6" />
+                  </div>
                   <div className="space-y-1">
                     <h4 className="font-black text-slate-800 text-xs sm:text-base">
                       {locale === 'ar' ? 'طلبات الشحن الجارية' : 'Shipments'}
@@ -262,6 +315,15 @@ export default function AdminDashboardPage() {
     0
   ];
 
+  const totalStatesSum = 
+    (stats.pendingOrders ?? 0) +
+    (stats.confirmedOrders ?? 0) +
+    (stats.shippedOrders ?? 0) +
+    (stats.deliveredOrders ?? 0) +
+    (stats.cancelledOrders ?? 0) +
+    (stats.confirmationFailedOrders ?? 0) +
+    (stats.deliveryFailedOrders ?? 0);
+
   return (
     <div className="space-y-8 animate-fadeIn" dir={dir}>
       <div className="text-right">
@@ -275,7 +337,7 @@ export default function AdminDashboardPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-900 text-white flex flex-col justify-between text-right space-y-3 sm:space-y-4 shadow-xl">
-          <span className="text-xl sm:text-2xl">💰</span>
+          <WalletIcon className="w-6 h-6 text-emerald-400 sm:w-8 sm:h-8" />
           <div className="space-y-1">
             <span className="text-[10px] sm:text-xs font-black text-slate-400 block">
               {locale === 'ar' ? 'إجمالي السحوبات المعتمدة' : 'Total Approved Withdrawals'}
@@ -287,7 +349,7 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-slate-200 flex flex-col justify-between text-right space-y-3 sm:space-y-4 shadow-sm">
-          <span className="text-xl sm:text-2xl">📦</span>
+          <PackageIcon className="w-6 h-6 text-indigo-500 sm:w-8 sm:h-8" />
           <div className="space-y-1">
             <span className="text-[10px] sm:text-xs font-black text-slate-400 block">
               {locale === 'ar' ? 'إجمالي الطلبات' : 'Total Orders'}
@@ -299,7 +361,7 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-slate-200 flex flex-col justify-between text-right space-y-3 sm:space-y-4 shadow-sm">
-          <span className="text-xl sm:text-2xl">👥</span>
+          <UsersIcon className="w-6 h-6 text-blue-500 sm:w-8 sm:h-8" />
           <div className="space-y-1">
             <span className="text-[10px] sm:text-xs font-black text-slate-400 block">
               {locale === 'ar' ? 'المسوقين المسجلين' : 'Registered Marketers'}
@@ -311,7 +373,7 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-slate-200 flex flex-col justify-between text-right space-y-3 sm:space-y-4 shadow-sm">
-          <span className="text-xl sm:text-2xl">⏳</span>
+          <ClockIcon className="w-6 h-6 text-amber-500 sm:w-8 sm:h-8" />
           <div className="space-y-1">
             <span className="text-[10px] sm:text-xs font-black text-slate-400 block">
               {locale === 'ar' ? 'سحوبات قيد الانتظار' : 'Pending Withdrawals'}
@@ -324,39 +386,153 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Order Status Breakdown & Performance Section */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
-        <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-slate-200 shadow-sm flex items-center justify-between text-right">
-          <div className="space-y-1">
-            <span className="text-[10px] sm:text-xs font-black text-slate-400 block">{locale === 'ar' ? 'الطلبات المسلمة' : 'Delivered Orders'}</span>
-            <span className="text-xl sm:text-2xl font-black text-emerald-600">
-              {stats.deliveredOrders.toLocaleString()}
-            </span>
+      <div className="space-y-4">
+        <h3 className="text-sm font-black text-slate-700 text-right">
+          {locale === 'ar' ? 'متابعة حالات الطلبات بالتفصيل' : 'Detailed Order Status Tracking'}
+        </h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
+          {/* Card 1: Pending */}
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between text-right space-y-3 group hover:border-amber-300 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black text-slate-400">
+                {totalStatesSum > 0 ? `${(((stats.pendingOrders ?? 0) / totalStatesSum) * 100).toFixed(1)}%` : '0%'}
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <ClockIcon className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-black text-slate-400 block truncate">
+                {locale === 'ar' ? 'قيد الانتظار' : 'Pending'}
+              </span>
+              <span className="text-lg font-black text-slate-800">
+                {(stats.pendingOrders ?? 0).toLocaleString()}
+              </span>
+            </div>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-lg">✅</div>
-        </div>
 
-        <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-slate-200 shadow-sm flex items-center justify-between text-right">
-          <div className="space-y-1">
-            <span className="text-[10px] sm:text-xs font-black text-slate-400 block">{locale === 'ar' ? 'الطلبات قيد الانتظار' : 'Pending Orders'}</span>
-            <span className="text-xl sm:text-2xl font-black text-amber-500">
-              {stats.pendingOrders.toLocaleString()}
-            </span>
+          {/* Card 2: Confirmed */}
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between text-right space-y-3 group hover:border-blue-300 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black text-slate-400">
+                {totalStatesSum > 0 ? `${(((stats.confirmedOrders ?? 0) / totalStatesSum) * 100).toFixed(1)}%` : '0%'}
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <CheckIcon className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-black text-slate-400 block truncate">
+                {locale === 'ar' ? 'مؤكد' : 'Confirmed'}
+              </span>
+              <span className="text-lg font-black text-slate-800">
+                {(stats.confirmedOrders ?? 0).toLocaleString()}
+              </span>
+            </div>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-lg">⏳</div>
-        </div>
 
-        <div className="col-span-2 md:col-span-1 p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-slate-200 shadow-sm flex items-center justify-between text-right">
-          <div className="space-y-1">
-            <span className="text-[10px] sm:text-xs font-black text-slate-400 block">{locale === 'ar' ? 'الطلبات الملغاة' : 'Cancelled Orders'}</span>
-            <span className="text-xl sm:text-2xl font-black text-rose-500">
-              {stats.cancelledOrders.toLocaleString()}
-            </span>
+          {/* Card 3: Shipped */}
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between text-right space-y-3 group hover:border-cyan-300 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black text-slate-400">
+                {totalStatesSum > 0 ? `${(((stats.shippedOrders ?? 0) / totalStatesSum) * 100).toFixed(1)}%` : '0%'}
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-cyan-50 text-cyan-600 flex items-center justify-center shrink-0">
+                <TruckIcon className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-black text-slate-400 block truncate">
+                {locale === 'ar' ? 'تم الشحن' : 'Shipped'}
+              </span>
+              <span className="text-lg font-black text-slate-800">
+                {(stats.shippedOrders ?? 0).toLocaleString()}
+              </span>
+            </div>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-lg">❌</div>
+
+          {/* Card 4: Delivered */}
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between text-right space-y-3 group hover:border-emerald-300 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black text-slate-400">
+                {totalStatesSum > 0 ? `${(((stats.deliveredOrders ?? 0) / totalStatesSum) * 100).toFixed(1)}%` : '0%'}
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <CheckCircleIcon className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-black text-slate-400 block truncate">
+                {locale === 'ar' ? 'تم التوصيل' : 'Delivered'}
+              </span>
+              <span className="text-lg font-black text-slate-800">
+                {(stats.deliveredOrders ?? 0).toLocaleString()}
+              </span>
+            </div>
+          </div>
+
+          {/* Card 5: Cancelled */}
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between text-right space-y-3 group hover:border-rose-300 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black text-slate-400">
+                {totalStatesSum > 0 ? `${(((stats.cancelledOrders ?? 0) / totalStatesSum) * 100).toFixed(1)}%` : '0%'}
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                <CloseIcon className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-black text-slate-400 block truncate">
+                {locale === 'ar' ? 'ملغي' : 'Cancelled'}
+              </span>
+              <span className="text-lg font-black text-slate-800">
+                {(stats.cancelledOrders ?? 0).toLocaleString()}
+              </span>
+            </div>
+          </div>
+
+          {/* Card 6: Confirmation Failed */}
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between text-right space-y-3 group hover:border-orange-300 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black text-slate-400">
+                {totalStatesSum > 0 ? `${(((stats.confirmationFailedOrders ?? 0) / totalStatesSum) * 100).toFixed(1)}%` : '0%'}
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                <WarningIcon className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-black text-slate-400 block truncate text-ellipsis">
+                {locale === 'ar' ? 'فشل التأكيد' : 'Confirm Failed'}
+              </span>
+              <span className="text-lg font-black text-slate-800">
+                {(stats.confirmationFailedOrders ?? 0).toLocaleString()}
+              </span>
+            </div>
+          </div>
+
+          {/* Card 7: Delivery Failed */}
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between text-right space-y-3 group hover:border-red-300 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black text-slate-400">
+                {totalStatesSum > 0 ? `${(((stats.deliveryFailedOrders ?? 0) / totalStatesSum) * 100).toFixed(1)}%` : '0%'}
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                <WarningIcon className="w-4 h-4 text-red-600" />
+              </div>
+            </div>
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-black text-slate-400 block truncate text-ellipsis">
+                {locale === 'ar' ? 'فشل التوصيل' : 'Delivery Failed'}
+              </span>
+              <span className="text-lg font-black text-slate-800">
+                {(stats.deliveryFailedOrders ?? 0).toLocaleString()}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Sales & Revenue History Chart */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm">
         {/* Chart Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-4">
@@ -621,8 +797,9 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
           <div className="p-5 border-b border-slate-100 bg-slate-50 text-right">
-            <h3 className="font-black text-slate-800 text-sm">
-              {locale === 'ar' ? '🏆 أعلى المسوقين مبيعاً' : '🏆 Top Performing Marketers'}
+            <h3 className="font-black text-slate-800 text-sm flex items-center gap-1.5 justify-end">
+              <span>{locale === 'ar' ? 'أعلى المسوقين مبيعاً' : 'Top Performing Marketers'}</span>
+              <TrophyIcon className="w-4 h-4 text-amber-500" />
             </h3>
           </div>
           <div className="divide-y divide-slate-100 text-right">
@@ -658,7 +835,7 @@ export default function AdminDashboardPage() {
                       <p className="text-[10px] text-slate-400 font-bold">{locale === 'ar' ? 'أرباح المسوق' : 'Earnings'}</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="text-right">
+                      <div className="text-end">
                         <p className="font-black text-slate-800 text-xs sm:text-sm">{m.marketerName}</p>
                         <p className="text-[10px] text-slate-400 font-bold">
                           {m.totalOrders} {locale === 'ar' ? 'طلب ناجح' : 'successful orders'}
@@ -680,8 +857,9 @@ export default function AdminDashboardPage() {
 
         <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
           <div className="p-5 border-b border-slate-100 bg-slate-50 text-right">
-            <h3 className="font-black text-slate-800 text-sm">
-              {locale === 'ar' ? '🔥 المنتجات الأكثر طلباً' : '🔥 Top Selling Products'}
+            <h3 className="font-black text-slate-800 text-sm flex items-center gap-1.5 justify-end">
+              <span>{locale === 'ar' ? 'المنتجات الأكثر طلباً' : 'Top Selling Products'}</span>
+              <TrendingUpIcon className="w-4 h-4 text-rose-500" />
             </h3>
           </div>
           <div className="divide-y divide-slate-100 text-right">
@@ -691,7 +869,7 @@ export default function AdminDashboardPage() {
               </div>
             ) : (
               topProducts.map((p, idx) => {
-                const productImg = p.imageUrl || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=80&q=80';
+                const productImg = getImageUrl(p.imageUrl);
                 return (
                   <div key={p.productId} className="p-4 flex justify-between items-center text-sm font-bold text-slate-700 hover:bg-slate-50/60 transition-colors">
                     <div className="text-left">
@@ -699,7 +877,7 @@ export default function AdminDashboardPage() {
                       <p className="text-[10px] text-slate-400 font-bold">{locale === 'ar' ? 'إجمالي المبيعات' : 'Total sales'}</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="text-right">
+                      <div className="text-end">
                         <p className="font-black text-slate-800 text-xs sm:text-sm line-clamp-1">{p.productName}</p>
                         <p className="text-xs text-primary font-black">{p.price || 0} ج.م</p>
                       </div>

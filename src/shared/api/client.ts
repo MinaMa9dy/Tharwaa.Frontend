@@ -38,7 +38,12 @@ function scheduleRefreshFailedReset() {
 
 // Response Interceptor for handling expired tokens via silent refresh
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (response.status === 204) {
+      response.data = { success: true };
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 

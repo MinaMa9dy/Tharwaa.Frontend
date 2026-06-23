@@ -5,8 +5,12 @@ export interface DashboardStatsDto {
   totalMarketers: number;
   totalOrders: number;
   pendingOrders: number;
+  confirmedOrders: number;
+  shippedOrders: number;
   deliveredOrders: number;
   cancelledOrders: number;
+  confirmationFailedOrders: number;
+  deliveryFailedOrders: number;
   totalWithdrawals: number;
   pendingWithdrawals: number;
 }

@@ -36,8 +36,13 @@ export const orderService = {
     return response.data;
   },
 
-  async updateStatus(id: number, status: OrderStatus): Promise<ApiResult<void>> {
-    const response = await apiClient.patch<ApiResult<void>>(`/Orders/${id}/status`, { status });
+  async updateStatus(id: number, status: OrderStatus, reason?: string): Promise<ApiResult<void>> {
+    const response = await apiClient.patch<ApiResult<void>>(`/Orders/${id}/status`, { status, reason });
+    return response.data;
+  },
+
+  async updateNotes(id: number, notes: string): Promise<ApiResult<void>> {
+    const response = await apiClient.patch<ApiResult<void>>(`/Orders/${id}/notes`, { notes });
     return response.data;
   },
 

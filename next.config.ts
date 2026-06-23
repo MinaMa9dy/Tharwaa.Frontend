@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
     '127.0.0.1:3000',
     '192.168.1.5:3000',
     '192.168.1.5',
+    '192.168.1.2:3000',
+    '192.168.1.2',
     '*.local',
     '*.vercel.app',
     ' Tharwaa-frontend.vercel.app'
@@ -19,6 +21,8 @@ const nextConfig: NextConfig = {
         '127.0.0.1:3000',
         '192.168.1.5:3000',
         '192.168.1.5',
+        '192.168.1.2:3000',
+        '192.168.1.2',
         '*.vercel.app',
         ' Tharwaa-frontend.vercel.net'
       ]

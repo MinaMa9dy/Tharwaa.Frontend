@@ -8,9 +8,15 @@ import { categoryService } from '@/features/categories/api/categoryService';
 import { ProductDto, ProductParams } from '@/shared/types/product';
 import { CategoryDto } from '@/shared/types/category';
 import { useCartStore } from '@/features/cart/store/cartStore';
+import Pagination from '@/shared/components/Pagination';
 import { toast } from 'react-hot-toast';
+import { SearchIcon, CartIcon, CloseIcon, SparklesIcon } from '@/shared/components/Icons';
 
 const ALL_CATEGORY: CategoryDto = { id: 0, name: 'الكل', nameEn: 'All', isActive: true };
+
+import { bannerService } from '@/features/banners/api/bannerService';
+import { BannerDto } from '@/shared/types/banner';
+import { env } from '@/shared/config/env';
 
 export default function ProductsPage() {
   const { locale, dir } = useLocale();
@@ -21,6 +27,8 @@ export default function ProductsPage() {
   const [selectedCategory, setSelectedCategory] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [banners, setBanners] = useState<BannerDto[]>([]);
+  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
 
   // Categories ref and scroll helper for PC view
   const categoriesRef = useRef<HTMLDivElement>(null);
@@ -40,6 +48,7 @@ export default function ProductsPage() {
   const [pageSize, setPageSize] = useState(12);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [mounted, setMounted] = useState(false);
 
   // Variant selector states
   const [selectedProduct, setSelectedProduct] = useState<ProductDto | null>(null);
@@ -47,6 +56,7 @@ export default function ProductsPage() {
   const [customPrice, setCustomPrice] = useState<number>(0);
   const [quantity, setQuantity] = useState(1);
   const [cartSuccessMessage, setCartSuccessMessage] = useState<string | null>(null);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   // Handle responsive page size detection
   useEffect(() => {
@@ -60,8 +70,37 @@ export default function ProductsPage() {
 
     handleResize();
     window.addEventListener('resize', handleResize);
+
+    const params = new URLSearchParams(window.location.search);
+    const urlPage = parseInt(params.get('page') || '1', 10) || 1;
+    if (urlPage !== 1) {
+      setCurrentPage(urlPage);
+    }
+    setMounted(true);
+
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const urlPage = parseInt(params.get('page') || '1', 10) || 1;
+      setCurrentPage(urlPage);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const params = new URLSearchParams(window.location.search);
+    const urlPage = parseInt(params.get('page') || '1', 10) || 1;
+    if (currentPage !== urlPage) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('page', currentPage.toString());
+      window.history.pushState({}, '', url.toString());
+    }
+  }, [currentPage, mounted]);
 
   // Reset current page when category or search query changes
   useEffect(() => {
@@ -85,6 +124,38 @@ export default function ProductsPage() {
     loadCategories();
   }, []);
 
+  // Load banners once on mount
+  useEffect(() => {
+    async function loadBanners() {
+      try {
+        const res = await bannerService.getAll();
+        if (res.success && res.data) {
+          setBanners(res.data);
+        }
+      } catch (err) {
+        // Ignore errors
+      }
+    }
+    loadBanners();
+  }, []);
+
+  // Autoplay banners
+  useEffect(() => {
+    if (banners.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveBannerIndex((prev) => (prev + 1) % banners.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [banners]);
+
+  const getImageUrl = (path: string) => {
+    if (!path) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    const apiBase = env.apiUrl.replace(/\/api$/, '');
+    const cleanUrl = path.startsWith('/') ? path.slice(1) : path;
+    return `${apiBase}/${cleanUrl}`;
+  };
+
   // Load products from backend with parameters (debounced for search query)
   useEffect(() => {
     let active = true;
@@ -107,7 +178,7 @@ export default function ProductsPage() {
         } else {
           setTotalPages(1);
         }
-        setProducts(dbProducts.filter(p => p.isActive));
+        setProducts(dbProducts);
       } catch (err) {
         if (active) {
           setProducts([]);
@@ -137,47 +208,109 @@ export default function ProductsPage() {
     setCustomPrice(product.price);
     setQuantity(1);
     setCartSuccessMessage(null);
+    setIsAddingToCart(false);
   };
 
   const handleAddToCart = async () => {
-    if (!selectedProduct) return;
-    await addItem(selectedProduct.id, chosenVariantId, quantity, selectedProduct, customPrice);
-    
-    const error = useCartStore.getState().error;
-    if (!error) {
-      toast.success(locale === 'ar' ? 'تم إضافة المنتج بنجاح إلى سلتك!' : 'Product added to cart successfully!');
-      setCartSuccessMessage('تم إضافة المنتج بنجاح إلى سلتك!');
-      setTimeout(() => {
-        setSelectedProduct(null);
-      }, 1500);
-    } else {
-      toast.error(locale === 'ar' ? `خطأ في إضافة المنتج للسلة: ${error}` : `Error adding product to cart: ${error}`);
+    if (!selectedProduct || isAddingToCart) return;
+    setIsAddingToCart(true);
+    try {
+      await addItem(selectedProduct.id, chosenVariantId, quantity, selectedProduct, customPrice);
+      
+      const error = useCartStore.getState().error;
+      if (!error) {
+        toast.success(locale === 'ar' ? 'تم إضافة المنتج بنجاح إلى سلتك!' : 'Product added to cart successfully!');
+        setCartSuccessMessage(locale === 'ar' ? 'تم إضافة المنتج بنجاح إلى سلتك!' : 'Product added to cart successfully!');
+        setTimeout(() => {
+          setSelectedProduct(null);
+        }, 1500);
+      } else {
+        toast.error(locale === 'ar' ? `خطأ في إضافة المنتج للسلة: ${error}` : `Error adding product to cart: ${error}`);
+      }
+    } catch (err: any) {
+      toast.error(locale === 'ar' ? 'فشل الاتصال بالخادم' : 'Server connection error');
+    } finally {
+      setIsAddingToCart(false);
     }
   };
+
+  if (!mounted) return null;
 
   return (
     <div className="space-y-8 animate-fadeIn" dir={dir}>
       {/* Banner */}
-      <div className="p-6 sm:p-10 rounded-3xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white relative overflow-hidden shadow-xl shadow-emerald-500/10">
-        <div className="relative z-10 space-y-3 sm:space-y-4 max-w-2xl text-right">
-          <span className="px-3 py-1 rounded-full bg-white/20 text-xs font-black uppercase tracking-wider">
-            {locale === 'ar' ? 'الكتالوج التجاري' : 'Trading Catalog'}
-          </span>
-          <h1 className="text-2xl sm:text-4xl font-black leading-tight">
-            {locale === 'ar' ? 'ابدأ بيع وتجارة بدون رأس مال' : 'Start Selling Without Capital'}
-          </h1>
-          <p className="text-white/90 text-sm sm:text-base font-bold">
-            {locale === 'ar'
-              ? 'اختر المنتجات التي تريد تسويقها، حدد سعر البيع المناسب لك، واترك الشحن والتوصيل وتحصيل الأرباح لـ ثروة.'
-              : 'Choose products to market, set your price, and let Tharwa handle shipping and payouts.'}
-          </p>
+      {banners.length > 0 ? (
+        <div className="relative w-full aspect-[3/1] rounded-3xl overflow-hidden shadow-xl shadow-slate-200/50 group border border-slate-200">
+          <div className="w-full h-full relative">
+            {banners.map((b, idx) => (
+              <img
+                key={b.id}
+                src={getImageUrl(b.imageUrl)}
+                alt={b.title}
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out ${
+                  idx === activeBannerIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                }`}
+              />
+            ))}
+          </div>
+          
+          {/* Navigation dots */}
+          {banners.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+              {banners.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveBannerIndex(idx)}
+                  className={`w-2 h-2 rounded-full transition-all cursor-pointer ${
+                    idx === activeBannerIndex ? 'bg-white w-4' : 'bg-white/50 hover:bg-white/80'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Swipe navigation arrows */}
+          {banners.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={() => setActiveBannerIndex((prev) => (prev === 0 ? banners.length - 1 : prev - 1))}
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-slate-950/40 hover:bg-slate-950/60 text-white flex items-center justify-center transition-all cursor-pointer select-none border border-white/10 opacity-0 group-hover:opacity-100 shadow-md text-xs"
+              >
+                ◀
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveBannerIndex((prev) => (prev + 1) % banners.length)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-slate-950/40 hover:bg-slate-950/60 text-white flex items-center justify-center transition-all cursor-pointer select-none border border-white/10 opacity-0 group-hover:opacity-100 shadow-md text-xs"
+              >
+                ▶
+              </button>
+            </>
+          )}
         </div>
-        <div className="absolute top-1/2 left-10 -translate-y-1/2 opacity-15 hidden lg:block">
-          <svg className="w-56 h-56 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-          </svg>
+      ) : (
+        <div className="p-6 sm:p-10 rounded-3xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white relative overflow-hidden shadow-xl shadow-emerald-500/10">
+          <div className="relative z-10 space-y-3 sm:space-y-4 max-w-2xl text-right">
+            <span className="px-3 py-1 rounded-full bg-white/20 text-xs font-black uppercase tracking-wider">
+              {locale === 'ar' ? 'الكتالوج التجاري' : 'Trading Catalog'}
+            </span>
+            <h1 className="text-2xl sm:text-4xl font-black leading-tight">
+              {locale === 'ar' ? 'ابدأ بيع وتجارة بدون رأس مال' : 'Start Selling Without Capital'}
+            </h1>
+            <p className="text-white/90 text-sm sm:text-base font-bold">
+              {locale === 'ar'
+                ? 'اختر المنتجات التي تريد تسويقها، حدد سعر البيع المناسب لك، واترك الشحن والتوصيل وتحصيل الأرباح لـ ثروة.'
+                : 'Choose products to market, set your price, and let Tharwa handle shipping and payouts.'}
+            </p>
+          </div>
+          <div className="absolute top-1/2 left-10 -translate-y-1/2 opacity-15 hidden lg:block">
+            <svg className="w-56 h-56 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Filters Area */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200">
@@ -227,7 +360,7 @@ export default function ProductsPage() {
         {/* Search Input */}
         <div className="relative w-full md:w-80 md:shrink-0">
           <span className="absolute inset-y-0 right-3 flex items-center text-slate-400">
-            🔎
+            <SearchIcon className="w-4 h-4" />
           </span>
           <input
             type="text"
@@ -274,7 +407,7 @@ export default function ProductsPage() {
                 <Link href={`/marketer/products/${prod.id}`} className="block">
                   <div className="relative aspect-square w-full bg-slate-50 overflow-hidden">
                     <img
-                      src={mainImg}
+                      src={getImageUrl(mainImg)}
                       alt={prod.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
@@ -288,11 +421,11 @@ export default function ProductsPage() {
                         {prod.categoryName || (locale === 'ar' ? 'تصنيف عام' : 'General')}
                       </span>
                       <h3 className="text-xs sm:text-base font-black text-slate-800 line-clamp-1 group-hover:text-primary transition-colors">
-                        {locale === 'ar' ? prod.name : prod.nameEn || prod.name}
+                        {prod.name}
                       </h3>
                     </Link>
                     <p className="text-[10px] sm:text-xs text-slate-400 font-bold line-clamp-1 sm:line-clamp-2 leading-relaxed">
-                      {locale === 'ar' ? prod.description : prod.descriptionEn || prod.description}
+                      {prod.description}
                     </p>
                   </div>
 
@@ -310,7 +443,8 @@ export default function ProductsPage() {
                       onClick={() => handleOpenVariantSelector(prod)}
                       className="w-full py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-primary hover:bg-primary/95 text-white font-extrabold text-[10px] sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1 sm:gap-2 cursor-pointer"
                     >
-                      🛒 {locale === 'ar' ? 'إضافة وتحديد السعر' : 'Configure & Add'}
+                      <CartIcon className="w-4 h-4" />
+                      <span>{locale === 'ar' ? 'إضافة وتحديد السعر' : 'Configure & Add'}</span>
                     </button>
                   </div>
                 </div>
@@ -322,33 +456,11 @@ export default function ProductsPage() {
 
       {/* Pagination controls */}
       {!isLoading && products.length > 0 && (
-        <div className="flex items-center justify-center gap-4 pt-8 pb-4">
-          <button
-            onClick={() => {
-              setCurrentPage(p => Math.max(1, p - 1));
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            disabled={currentPage === 1}
-            className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-extrabold text-xs sm:text-sm disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
-          >
-            {locale === 'ar' ? 'الصفحة السابقة ➡️' : '⬅️ Previous'}
-          </button>
-          
-          <span className="text-xs sm:text-sm font-black text-slate-600 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200/50">
-            {locale === 'ar' ? `الصفحة ${currentPage}` : `Page ${currentPage}`}
-          </span>
-          
-          <button
-            onClick={() => {
-              setCurrentPage(p => p + 1);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            disabled={currentPage >= totalPages}
-            className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-extrabold text-xs sm:text-sm disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
-          >
-            {locale === 'ar' ? '⬅️ الصفحة التالية' : 'Next ➡️'}
-          </button>
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
       )}
 
       {/* Variant & Commission Selector Modal */}
@@ -361,29 +473,29 @@ export default function ProductsPage() {
               </h3>
               <button
                 onClick={() => setSelectedProduct(null)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:text-slate-700 text-xs font-black"
+                className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:text-slate-700 cursor-pointer"
               >
-                ✕
+                <CloseIcon className="w-4 h-4" />
               </button>
             </div>
 
             <div className="p-6 space-y-6">
               {cartSuccessMessage ? (
-                <div className="p-8 text-center space-y-3 bg-emerald-50 text-emerald-700 rounded-2xl border border-emerald-100">
-                  <span className="text-3xl">🎉</span>
+                <div className="p-8 text-center space-y-3 bg-emerald-50 text-emerald-700 rounded-2xl border border-emerald-100 flex flex-col items-center">
+                  <SparklesIcon className="w-8 h-8 text-emerald-600 animate-pulse" />
                   <p className="text-base font-black">{cartSuccessMessage}</p>
                 </div>
               ) : (
                 <>
                   <div className="flex gap-4">
                     <img
-                      src={selectedProduct.files[0]?.url || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=150&q=80'}
+                      src={getImageUrl(selectedProduct.files[0]?.url)}
                       alt={selectedProduct.name}
                       className="w-20 h-20 rounded-xl object-cover border border-slate-100"
                     />
                     <div className="flex-1 space-y-1">
                       <h4 className="font-black text-slate-800 text-base">
-                        {locale === 'ar' ? selectedProduct.name : selectedProduct.nameEn || selectedProduct.name}
+                        {selectedProduct.name}
                       </h4>
                       <p className="text-xs text-slate-400 font-bold">
                         {locale === 'ar' ? `سعر الجملة: ${selectedProduct.price} ج.م` : `Wholesale price: ${selectedProduct.price} EGP`}
@@ -476,10 +588,20 @@ export default function ProductsPage() {
 
                     <button
                       onClick={handleAddToCart}
-                      disabled={customPrice < (selectedProduct.variants.find(v => v.id === chosenVariantId)?.price || selectedProduct.price)}
+                      disabled={isAddingToCart || customPrice < (selectedProduct.variants.find(v => v.id === chosenVariantId)?.price || selectedProduct.price)}
                       className="flex-1 h-12 rounded-xl bg-primary hover:bg-primary/95 text-white font-extrabold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed"
                     >
-                      🛒 {locale === 'ar' ? 'تأكيد وإضافة للسلة' : 'Confirm & Add'}
+                      {isAddingToCart ? (
+                        <>
+                          <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>{locale === 'ar' ? 'جاري الإضافة للسلة...' : 'Adding to Cart...'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <CartIcon className="w-4 h-4" />
+                          <span>{locale === 'ar' ? 'تأكيد وإضافة للسلة' : 'Confirm & Add'}</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </>

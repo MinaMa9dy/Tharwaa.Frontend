@@ -5,16 +5,18 @@ import { useLocale } from '@/shared/context/LocaleContext';
 import { categoryService } from '@/features/categories/api/categoryService';
 import { CategoryDto } from '@/shared/types/category';
 import { toast } from 'react-hot-toast';
+import { PlusIcon, TrashIcon } from '@/shared/components/Icons';
+
 
 export default function AdminCategoriesPage() {
   const { locale, dir } = useLocale();
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [newCatNameAr, setNewCatNameAr] = useState('');
-  const [newCatNameEn, setNewCatNameEn] = useState('');
   const [parentCategoryId, setParentCategoryId] = useState<number | ''>('');
   
   const [isAdding, setIsAdding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const loadCategories = async () => {
     setIsLoading(true);
@@ -38,19 +40,17 @@ export default function AdminCategoriesPage() {
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCatNameAr || !newCatNameEn) return;
+    if (!newCatNameAr) return;
     setIsAdding(true);
     try {
       const res = await categoryService.create({
         name: newCatNameAr,
-        nameEn: newCatNameEn,
         parentCategoryId: parentCategoryId !== '' ? Number(parentCategoryId) : null
       });
 
       if (res.success) {
         toast.success(locale === 'ar' ? 'تم إضافة القسم بنجاح!' : 'Category added successfully!');
         setNewCatNameAr('');
-        setNewCatNameEn('');
         setParentCategoryId('');
         loadCategories();
       } else {
@@ -60,6 +60,29 @@ export default function AdminCategoriesPage() {
       toast.error(locale === 'ar' ? `خطأ أثناء إضافة القسم: ${err.message}` : `Error adding category: ${err.message}`);
     } finally {
       setIsAdding(false);
+    }
+  };
+
+  const handleDeleteCategory = async (id: number, name: string) => {
+    const confirmMsg =
+      locale === 'ar'
+        ? `هل أنت متأكد من حذف القسم "${name}"؟ لا يمكن التراجع عن هذا الإجراء.`
+        : `Are you sure you want to delete "${name}"? This action cannot be undone.`;
+    if (!confirm(confirmMsg)) return;
+
+    setDeletingId(id);
+    try {
+      const res = await categoryService.delete(id);
+      if (res.success) {
+        toast.success(locale === 'ar' ? 'تم حذف القسم بنجاح' : 'Category deleted successfully');
+        loadCategories();
+      } else {
+        toast.error(res.message || (locale === 'ar' ? 'فشل حذف القسم' : 'Failed to delete category'));
+      }
+    } catch (err: any) {
+      toast.error(locale === 'ar' ? `خطأ: ${err.message}` : `Error: ${err.message}`);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -108,18 +131,6 @@ export default function AdminCategoriesPage() {
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-black text-slate-600">{locale === 'ar' ? 'اسم القسم (بالإنجليزية):' : 'Name (English):'}</label>
-              <input
-                type="text"
-                required
-                value={newCatNameEn}
-                onChange={(e) => setNewCatNameEn(e.target.value)}
-                placeholder="Example: Cosmetics"
-                className="w-full text-right p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/10 text-xs font-bold"
-              />
-            </div>
-
             <div className="space-y-1 text-right">
               <label className="text-xs font-black text-slate-600">
                 {locale === 'ar' ? 'القسم الأب (اختياري):' : 'Parent Category (Optional):'}
@@ -132,7 +143,7 @@ export default function AdminCategoriesPage() {
                 <option value="">{locale === 'ar' ? 'بدون قسم أب (قسم رئيسي)' : 'None (Root Category)'}</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {locale === 'ar' ? c.name : c.nameEn || c.name}
+                    {c.name}
                   </option>
                 ))}
               </select>
@@ -140,7 +151,7 @@ export default function AdminCategoriesPage() {
 
             <button
               type="submit"
-              disabled={isAdding || !newCatNameAr || !newCatNameEn}
+              disabled={isAdding || !newCatNameAr}
               className="w-full py-3.5 rounded-xl bg-primary hover:bg-primary/95 text-white font-extrabold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed disabled:shadow-none"
             >
               {isAdding ? (
@@ -149,7 +160,10 @@ export default function AdminCategoriesPage() {
                   <span>{locale === 'ar' ? 'جاري الإضافة...' : 'Adding...'}</span>
                 </>
               ) : (
-                <span>➕ {locale === 'ar' ? 'إضافة القسم الجديد' : 'Add Category'}</span>
+                <span className="flex items-center justify-center gap-1.5">
+                  <PlusIcon className="w-4 h-4" />
+                  <span>{locale === 'ar' ? 'إضافة القسم الجديد' : 'Add Category'}</span>
+                </span>
               )}
             </button>
           </form>
@@ -181,33 +195,50 @@ export default function AdminCategoriesPage() {
                     : null;
                   
                   return (
-                    <div key={cat.id} className="p-5 flex justify-between items-center">
-                      <button
-                        onClick={() => handleToggleActive(cat.id)}
-                        className={`px-3 py-1 rounded-xl text-xs font-black border transition-all ${
-                          cat.isActive
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200'
-                            : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200'
-                        }`}
-                      >
-                        {cat.isActive
-                          ? (locale === 'ar' ? 'نشط (تعطيل)' : 'Active (Disable)')
-                          : (locale === 'ar' ? 'غير نشط (تفعيل)' : 'Inactive (Enable)')}
-                      </button>
+                    <div key={cat.id} className="p-4 flex justify-between items-center gap-3">
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => handleToggleActive(cat.id)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-black border transition-all ${
+                            cat.isActive
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200'
+                              : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200'
+                          }`}
+                        >
+                          {cat.isActive
+                            ? (locale === 'ar' ? 'نشط (تعطيل)' : 'Active (Disable)')
+                            : (locale === 'ar' ? 'غير نشط (تفعيل)' : 'Inactive (Enable)')}
+                        </button>
 
-                      <div className="space-y-1">
+                        <button
+                          onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                          disabled={deletingId === cat.id}
+                          title={locale === 'ar' ? 'حذف القسم' : 'Delete Category'}
+                          className="p-1.5 rounded-xl text-rose-500 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {deletingId === cat.id ? (
+                            <span className="w-4 h-4 border-2 border-rose-400 border-t-transparent rounded-full animate-spin block" />
+                          ) : (
+                            <TrashIcon className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Category info */}
+                      <div className="space-y-0.5">
                         <div className="flex items-center gap-1.5 justify-end">
                           <span className="text-base font-black text-slate-800">
                             {cat.name}
                           </span>
                           {parentCat && (
                             <span className="bg-slate-100 text-slate-500 text-[9px] px-2 py-0.5 rounded-full border border-slate-200 font-bold">
-                              {locale === 'ar' ? `تابع لـ: ${parentCat.name}` : `Sub of: ${parentCat.nameEn || parentCat.name}`}
+                              {locale === 'ar' ? `تابع لـ: ${parentCat.name}` : `Sub of: ${parentCat.name}`}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-slate-400 font-bold">
-                          {cat.nameEn}
+                        <p className="text-[10px] font-bold text-slate-400 text-end">
+                          #{cat.id}
                         </p>
                       </div>
                     </div>

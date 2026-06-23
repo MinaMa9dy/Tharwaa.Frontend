@@ -336,15 +336,28 @@ export default function MaintenancePage() {
           {/* Features */}
           <div className="features">
             <div className="feature-item">
-              <span className="feature-icon">⚡</span>
+              <span className="feature-icon flex items-center justify-center">
+                <svg className="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </span>
               تحسين الأداء والسرعة
             </div>
             <div className="feature-item">
-              <span className="feature-icon">🔒</span>
+              <span className="feature-icon flex items-center justify-center">
+                <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+              </span>
               تعزيز الأمان وحماية البيانات
             </div>
             <div className="feature-item">
-              <span className="feature-icon">✨</span>
+              <span className="feature-icon flex items-center justify-center">
+                <svg className="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+              </span>
               إضافة ميزات جديدة مميزة
             </div>
           </div>

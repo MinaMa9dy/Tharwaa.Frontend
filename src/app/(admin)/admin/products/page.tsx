@@ -5,10 +5,27 @@ import { useLocale } from '@/shared/context/LocaleContext';
 import { productService } from '@/features/products/api/productService';
 import { categoryService } from '@/features/categories/api/categoryService';
 import { supplierService } from '@/features/suppliers/api/supplierService';
-import { ProductDto, CreateProductVariantDto, CreateProductPhotoDto } from '@/shared/types/product';
+import { AdminProductDto, CreateProductVariantDto, CreateProductPhotoDto } from '@/shared/types/product';
 import { CategoryDto } from '@/shared/types/category';
 import { SupplierDto } from '@/shared/types/supplier';
 import { toast } from 'react-hot-toast';
+import Pagination from '@/shared/components/Pagination';
+import ProductImageCropper from '@/shared/components/ProductImageCropper';
+import { env } from '@/shared/config/env';
+import {
+  PlusIcon,
+  SearchIcon,
+  EditIcon,
+  TrashIcon,
+  CloseIcon,
+  ImageIcon,
+  LinkIcon,
+  SaveIcon,
+  StarIcon,
+  SparklesIcon,
+  WarningIcon,
+  CheckCircleIcon
+} from '@/shared/components/Icons';
 
 interface AttributeLookup {
   id: string;
@@ -18,7 +35,7 @@ interface AttributeLookup {
 
 export default function AdminProductsPage() {
   const { locale, dir } = useLocale();
-  const [products, setProducts] = useState<ProductDto[]>([]);
+  const [products, setProducts] = useState<AdminProductDto[]>([]);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [attributes, setAttributes] = useState<AttributeLookup[]>([]);
@@ -28,6 +45,7 @@ export default function AdminProductsPage() {
   const [pageSize, setPageSize] = useState(12);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [mounted, setMounted] = useState(false);
 
   // Handle responsive page size detection
   useEffect(() => {
@@ -41,8 +59,37 @@ export default function AdminProductsPage() {
 
     handleResize();
     window.addEventListener('resize', handleResize);
+
+    const params = new URLSearchParams(window.location.search);
+    const urlPage = parseInt(params.get('page') || '1', 10) || 1;
+    if (urlPage !== 1) {
+      setCurrentPage(urlPage);
+    }
+    setMounted(true);
+
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const urlPage = parseInt(params.get('page') || '1', 10) || 1;
+      setCurrentPage(urlPage);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const params = new URLSearchParams(window.location.search);
+    const urlPage = parseInt(params.get('page') || '1', 10) || 1;
+    if (currentPage !== urlPage) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('page', currentPage.toString());
+      window.history.pushState({}, '', url.toString());
+    }
+  }, [currentPage, mounted]);
 
   // Reset current page when search query or category changes
   useEffect(() => {
@@ -55,7 +102,7 @@ export default function AdminProductsPage() {
   // Modals state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<ProductDto | null>(null);
+  const [editingProduct, setEditingProduct] = useState<AdminProductDto | null>(null);
 
   // Form states - General Info
   const [name, setName] = useState('');
@@ -67,6 +114,10 @@ export default function AdminProductsPage() {
   const [photos, setPhotos] = useState<CreateProductPhotoDto[]>([]);
   const [newPhotoUrl, setNewPhotoUrl] = useState('');
   const [newPhotoIsMain, setNewPhotoIsMain] = useState(false);
+  const [photoInputTab, setPhotoInputTab] = useState<'upload' | 'link'>('upload');
+  const [croppedProductFile, setCroppedProductFile] = useState<File | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [cropperKey, setCropperKey] = useState(0);
 
   // Form states - Variants List
   const [variants, setVariants] = useState<CreateProductVariantDto[]>([]);
@@ -74,6 +125,7 @@ export default function AdminProductsPage() {
   // Temporary Form states for adding a new variant
   const [varSku, setVarSku] = useState('');
   const [varPrice, setVarPrice] = useState<number>(0);
+  const [varPurchasePrice, setVarPurchasePrice] = useState<number>(0);
   const [varStock, setVarStock] = useState<number>(0);
   const [varAttributes, setVarAttributes] = useState<{ attributeId: string; value: string }[]>([]);
   const [editingVariantSku, setEditingVariantSku] = useState<string | null>(null);
@@ -84,7 +136,7 @@ export default function AdminProductsPage() {
     setIsLoading(true);
     try {
       const [pRes, cRes, aRes, sRes] = await Promise.all([
-        productService.getAll({ 
+        productService.getAllAdmin({ 
           pageSize, 
           pageNumber: currentPage, 
           includeInactive: true, 
@@ -141,7 +193,7 @@ export default function AdminProductsPage() {
     setIsCreateOpen(true);
   };
 
-  const openEditModal = (prod: ProductDto) => {
+  const openEditModal = (prod: AdminProductDto) => {
     setEditingProduct(prod);
     setName(prod.name);
     setDescription(prod.description || '');
@@ -169,6 +221,7 @@ export default function AdminProductsPage() {
       return {
         sku: v.sku,
         price: v.price,
+        purchasePrice: v.purchasePrice || 0,
         stockQuantity: v.quantity,
         variantAttributes: resolvedAttrs
       };
@@ -181,6 +234,7 @@ export default function AdminProductsPage() {
   const resetVariantForm = () => {
     setVarSku('');
     setVarPrice(0);
+    setVarPurchasePrice(0);
     setVarStock(0);
     setVarAttributes([]);
     setEditingVariantSku(null);
@@ -203,6 +257,44 @@ export default function AdminProductsPage() {
     setPhotos(updatedPhotos);
     setNewPhotoUrl('');
     setNewPhotoIsMain(false);
+  };
+
+  const getImageUrl = (url?: string) => {
+    if (!url) return 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=80&q=80';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    const apiBase = env.apiUrl.replace(/\/api$/, '');
+    const cleanUrl = url.startsWith('/') ? url.slice(1) : url;
+    return `${apiBase}/${cleanUrl}`;
+  };
+
+  const handleUploadAndAddPhoto = async () => {
+    if (!croppedProductFile) return;
+    setIsUploadingPhoto(true);
+    try {
+      const res = await productService.uploadPhoto(croppedProductFile);
+      if (res.success && res.data) {
+        let updatedPhotos = [...photos];
+        if (newPhotoIsMain) {
+          updatedPhotos = updatedPhotos.map(p => ({ ...p, isMain: false }));
+        }
+        updatedPhotos.push({
+          photoUrl: res.data,
+          isMain: newPhotoIsMain || photos.length === 0
+        });
+        setPhotos(updatedPhotos);
+        setCroppedProductFile(null);
+        setCropperKey(prev => prev + 1);
+        setNewPhotoIsMain(false);
+        toast.success(locale === 'ar' ? 'تم رفع وإضافة الصورة بنجاح!' : 'Photo uploaded and added successfully!');
+      } else {
+        toast.error(res.message || (locale === 'ar' ? 'فشل رفع الصورة' : 'Failed to upload photo'));
+      }
+    } catch (err: any) {
+      const errMsg = err.response?.data?.message || err.message || (locale === 'ar' ? 'فشل رفع الصورة' : 'Failed to upload photo');
+      toast.error(locale === 'ar' ? `خطأ: ${errMsg}` : `Error: ${errMsg}`);
+    } finally {
+      setIsUploadingPhoto(false);
+    }
   };
 
   const handleRemovePhoto = (index: number) => {
@@ -241,12 +333,13 @@ export default function AdminProductsPage() {
     setEditingVariantSku(v.sku);
     setVarSku(v.sku);
     setVarPrice(v.price);
+    setVarPurchasePrice(v.purchasePrice || 0);
     setVarStock(v.stockQuantity);
     setVarAttributes(v.variantAttributes || []);
   };
 
   const handleAddVariant = () => {
-    if (!varSku || varPrice <= 0 || varStock < 0) {
+    if (!varSku || varPrice <= 0 || varPurchasePrice < 0 || varStock < 0) {
       toast.error(locale === 'ar' ? 'الرجاء تعبئة بيانات البديل بشكل صحيح' : 'Please fill variant info correctly');
       return;
     }
@@ -263,6 +356,7 @@ export default function AdminProductsPage() {
           return {
             sku: varSku,
             price: varPrice,
+            purchasePrice: varPurchasePrice,
             stockQuantity: varStock,
             variantAttributes: varAttributes.filter(a => a.attributeId && a.value)
           };
@@ -282,6 +376,7 @@ export default function AdminProductsPage() {
       const newVar: CreateProductVariantDto = {
         sku: varSku,
         price: varPrice,
+        purchasePrice: varPurchasePrice,
         stockQuantity: varStock,
         variantAttributes: varAttributes.filter(a => a.attributeId && a.value)
       };
@@ -401,6 +496,8 @@ export default function AdminProductsPage() {
     }
   };
 
+  if (!mounted) return null;
+
   return (
     <div className="space-y-8 animate-fadeIn" dir={dir}>
       <div className="text-right border-b border-slate-200 pb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -414,9 +511,10 @@ export default function AdminProductsPage() {
         </div>
         <button
           onClick={openCreateModal}
-          className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/95 text-white font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all"
+          className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/95 text-white font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-1.5"
         >
-          {locale === 'ar' ? '➕ إضافة منتج جديد' : '➕ Add New Product'}
+          <PlusIcon className="w-4 h-4" />
+          <span>{locale === 'ar' ? 'إضافة منتج جديد' : 'Add New Product'}</span>
         </button>
       </div>
 
@@ -443,7 +541,7 @@ export default function AdminProductsPage() {
 
             <div className="relative w-full sm:w-64">
               <span className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
-                🔍
+                <SearchIcon className="w-4 h-4" />
               </span>
               <input
                 type="text"
@@ -488,13 +586,12 @@ export default function AdminProductsPage() {
                     <td className="p-4">
                       <div className="flex items-center gap-3 justify-start text-right">
                         <img
-                          src={prod.files[0]?.url || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=80&q=80'}
+                          src={getImageUrl(prod.files.find(f => f.isMain)?.url || prod.files[0]?.url)}
                           alt={prod.name}
                           className="w-10 h-10 rounded-lg object-cover border border-slate-100 shrink-0 bg-slate-50"
                         />
                         <div>
                           <p className="text-slate-900 font-black">{prod.name}</p>
-                          <p className="text-[10px] text-slate-400 font-bold">{prod.nameEn || ''}</p>
                         </div>
                       </div>
                     </td>
@@ -522,17 +619,19 @@ export default function AdminProductsPage() {
                       <div className="flex gap-2 justify-center items-center">
                         <button
                           onClick={() => openEditModal(prod)}
-                          className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors text-xs font-black border border-amber-200"
+                          className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors text-xs font-black border border-amber-200 flex items-center gap-1"
                           title={locale === 'ar' ? 'تعديل' : 'Edit'}
                         >
-                          ✏️ {locale === 'ar' ? 'تعديل' : 'Edit'}
+                          <EditIcon className="w-3.5 h-3.5" />
+                          <span>{locale === 'ar' ? 'تعديل' : 'Edit'}</span>
                         </button>
                         <button
                           onClick={() => handleDeleteProduct(prod.id)}
-                          className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors text-xs font-black border border-rose-200"
+                          className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors text-xs font-black border border-rose-200 flex items-center gap-1"
                           title={locale === 'ar' ? 'حذف' : 'Delete'}
                         >
-                          🗑️ {locale === 'ar' ? 'حذف' : 'Delete'}
+                          <TrashIcon className="w-3.5 h-3.5" />
+                          <span>{locale === 'ar' ? 'حذف' : 'Delete'}</span>
                         </button>
                       </div>
                     </td>
@@ -545,33 +644,11 @@ export default function AdminProductsPage() {
 
         {/* Pagination controls */}
         {!isLoading && products.length > 0 && (
-          <div className="flex items-center justify-center gap-4 p-6 border-t border-slate-100 bg-slate-50">
-            <button
-              onClick={() => {
-                setCurrentPage(p => Math.max(1, p - 1));
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              disabled={currentPage === 1}
-              className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-extrabold text-xs sm:text-sm disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
-            >
-              {locale === 'ar' ? 'الصفحة السابقة ➡️' : '⬅️ Previous'}
-            </button>
-            
-            <span className="text-xs sm:text-sm font-black text-slate-600 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200/50">
-              {locale === 'ar' ? `الصفحة ${currentPage}` : `Page ${currentPage}`}
-            </span>
-            
-            <button
-              onClick={() => {
-                setCurrentPage(p => p + 1);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              disabled={currentPage >= totalPages || totalPages === 0}
-              className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-extrabold text-xs sm:text-sm disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
-            >
-              {locale === 'ar' ? '⬅️ الصفحة التالية' : 'Next ➡️'}
-            </button>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         )}
       </div>
 
@@ -586,14 +663,15 @@ export default function AdminProductsPage() {
                   : (locale === 'ar' ? 'تعديل تفاصيل وبدائل المنتج' : 'Edit Product Details')}
               </h3>
               <button
+                type="button"
                 onClick={() => {
                   setIsCreateOpen(false);
                   setIsEditOpen(false);
                   setEditingProduct(null);
                 }}
-                className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:text-slate-700 text-xs font-black"
+                className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:text-slate-700 cursor-pointer transition-colors"
               >
-                ✕
+                <CloseIcon className="w-4 h-4" />
               </button>
             </div>
 
@@ -667,47 +745,117 @@ export default function AdminProductsPage() {
                   {locale === 'ar' ? '2. صور المنتج' : '2. Product Images'}
                 </h4>
 
-                <div className="flex gap-2 items-end justify-start">
-                  <div className="flex-1 space-y-1 text-right">
-                    <label className="text-xs font-black text-slate-600">{locale === 'ar' ? 'رابط الصورة المباشر:' : 'Photo URL:'}</label>
-                    <input
-                      type="text"
-                      placeholder="https://example.com/image.jpg"
-                      value={newPhotoUrl}
-                      onChange={(e) => setNewPhotoUrl(e.target.value)}
-                      className="w-full text-right p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/10 text-xs font-bold"
-                    />
-                  </div>
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <input
-                      type="checkbox"
-                      id="isMainCheckbox"
-                      checked={newPhotoIsMain}
-                      onChange={(e) => setNewPhotoIsMain(e.target.checked)}
-                      className="w-4 h-4 rounded text-primary focus:ring-primary/20 border-slate-200"
-                    />
-                    <label htmlFor="isMainCheckbox" className="text-xs font-black text-slate-600">{locale === 'ar' ? 'رئيسية' : 'Main'}</label>
-                  </div>
+                {/* Visual Tab Selection for Product Photos */}
+                <div className="flex gap-2 border-b border-slate-200 pb-2.5 mb-4 justify-start">
                   <button
                     type="button"
-                    onClick={handleAddPhoto}
-                    className="px-4 py-3 rounded-xl bg-slate-800 text-white font-black text-xs mb-1.5 hover:bg-slate-700 transition-colors"
+                    onClick={() => setPhotoInputTab('upload')}
+                    className={`px-4 py-2 text-xs font-black rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                      photoInputTab === 'upload'
+                        ? 'bg-primary text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
                   >
-                    {locale === 'ar' ? '➕ إضافة' : '➕ Add'}
+                    <ImageIcon className="w-3.5 h-3.5" />
+                    <span>{locale === 'ar' ? 'رفع وقص صورة المنتج' : 'Upload & Crop Photo'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPhotoInputTab('link')}
+                    className={`px-4 py-2 text-xs font-black rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                      photoInputTab === 'link'
+                        ? 'bg-primary text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    <LinkIcon className="w-3.5 h-3.5" />
+                    <span>{locale === 'ar' ? 'رابط خارجي مباشر' : 'Direct External Link'}</span>
                   </button>
                 </div>
+
+                {photoInputTab === 'upload' ? (
+                  <div className="space-y-4">
+                    {/* Visual Image Cropper Component */}
+                    <ProductImageCropper key={cropperKey} onCrop={setCroppedProductFile} />
+                    
+                    <div className="flex items-center justify-between gap-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200/50">
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="checkbox"
+                          id="isMainCheckboxUpload"
+                          checked={newPhotoIsMain}
+                          onChange={(e) => setNewPhotoIsMain(e.target.checked)}
+                          className="w-4 h-4 rounded text-primary focus:ring-primary/20 border-slate-200"
+                        />
+                        <label htmlFor="isMainCheckboxUpload" className="text-xs font-black text-slate-600">
+                          {locale === 'ar' ? 'تعيين كصورة رئيسية' : 'Set as main product photo'}
+                        </label>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleUploadAndAddPhoto}
+                        disabled={isUploadingPhoto || !croppedProductFile}
+                        className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-extrabold text-xs transition-colors flex items-center gap-1.5"
+                      >
+                        {isUploadingPhoto ? (
+                          <>
+                            <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <span>{locale === 'ar' ? 'جاري الرفع...' : 'Uploading...'}</span>
+                          </>
+                        ) : (
+                          <span className="flex items-center gap-1.5">
+                            <SaveIcon className="w-3.5 h-3.5" />
+                            <span>{locale === 'ar' ? 'رفع وإضافة الصورة' : 'Upload & Add Photo'}</span>
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-2 items-end justify-start">
+                    <div className="flex-1 space-y-1 text-right">
+                      <label className="text-xs font-black text-slate-600">{locale === 'ar' ? 'رابط الصورة المباشر:' : 'Photo URL:'}</label>
+                      <input
+                        type="text"
+                        placeholder="https://example.com/image.jpg"
+                        value={newPhotoUrl}
+                        onChange={(e) => setNewPhotoUrl(e.target.value)}
+                        className="w-full text-right p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/10 text-xs font-bold"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <input
+                        type="checkbox"
+                        id="isMainCheckbox"
+                        checked={newPhotoIsMain}
+                        onChange={(e) => setNewPhotoIsMain(e.target.checked)}
+                        className="w-4 h-4 rounded text-primary focus:ring-primary/20 border-slate-200"
+                      />
+                      <label htmlFor="isMainCheckbox" className="text-xs font-black text-slate-600">{locale === 'ar' ? 'رئيسية' : 'Main'}</label>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddPhoto}
+                      className="px-4 py-3 rounded-xl bg-slate-800 text-white font-black text-xs mb-1.5 hover:bg-slate-700 transition-colors flex items-center gap-1.5"
+                    >
+                      <PlusIcon className="w-3.5 h-3.5" />
+                      <span>{locale === 'ar' ? 'إضافة' : 'Add'}</span>
+                    </button>
+                  </div>
+                )}
 
                 {photos.length > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/50">
                     {photos.map((ph, idx) => (
                       <div key={idx} className={`flex flex-col rounded-2xl overflow-hidden border bg-white transition-all ${ph.isMain ? 'border-primary ring-2 ring-primary/20' : 'border-slate-200 hover:border-slate-300'}`}>
                         <div className="relative w-full aspect-square bg-slate-100 border-b border-slate-100">
-                          <img src={ph.photoUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                          <img src={getImageUrl(ph.photoUrl)} alt="" className="absolute inset-0 w-full h-full object-cover" />
                         </div>
                         <div className="p-2 sm:p-3 flex gap-2 justify-between items-center bg-slate-50/50 mt-auto">
                           {ph.isMain ? (
                             <span className="bg-primary text-white text-[9px] sm:text-[11px] font-black px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl shadow-xs flex items-center gap-1 shrink-0">
-                              ⭐ {locale === 'ar' ? 'رئيسية' : 'Main'}
+                              <StarIcon className="w-3 h-3 fill-white text-white" />
+                              <span>{locale === 'ar' ? 'رئيسية' : 'Main'}</span>
                             </span>
                           ) : (
                             <button
@@ -721,10 +869,10 @@ export default function AdminProductsPage() {
                           <button
                             type="button"
                             onClick={() => handleRemovePhoto(idx)}
-                            className="bg-rose-600 hover:bg-rose-700 text-white p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-xs font-black cursor-pointer transition-colors shrink-0"
+                            className="bg-rose-600 hover:bg-rose-700 text-white p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-xs font-black cursor-pointer transition-colors shrink-0 flex items-center justify-center"
                             title={locale === 'ar' ? 'إزالة' : 'Remove'}
                           >
-                            🗑️
+                            <TrashIcon className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>
@@ -745,11 +893,12 @@ export default function AdminProductsPage() {
 
                 {/* Subform to create new variant */}
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/50 space-y-4">
-                  <span className="text-xs font-black text-slate-700 block">
-                    {locale === 'ar' ? '✨ إضافة خيار بديل جديد للمنتج:' : '✨ Configure a new variant:'}
+                  <span className="text-xs font-black text-slate-700 block flex items-center gap-1.5 justify-end">
+                    <span>{locale === 'ar' ? 'إضافة خيار بديل جديد للمنتج:' : 'Configure a new variant:'}</span>
+                    <SparklesIcon className="w-3.5 h-3.5 text-primary" />
                   </span>
 
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="space-y-1">
                       <label className="text-[10px] font-black text-slate-500">رمز المخزون (SKU):</label>
                       <input
@@ -767,6 +916,16 @@ export default function AdminProductsPage() {
                         min={0}
                         value={varPrice}
                         onChange={(e) => setVarPrice(parseFloat(e.target.value) || 0)}
+                        className="w-full text-right p-2.5 rounded-lg border border-slate-200 focus:outline-none text-[11px] font-bold bg-white"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-500">{locale === 'ar' ? 'سعر الشراء (ج.م):' : 'Purchase Price (EGP):'}</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={varPurchasePrice}
+                        onChange={(e) => setVarPurchasePrice(parseFloat(e.target.value) || 0)}
                         className="w-full text-right p-2.5 rounded-lg border border-slate-200 focus:outline-none text-[11px] font-bold bg-white"
                       />
                     </div>
@@ -789,9 +948,10 @@ export default function AdminProductsPage() {
                         <button
                           type="button"
                           onClick={handleAddAttributeToVariant}
-                          className="px-2 py-1 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 text-[10px] font-black transition-colors"
+                          className="px-2 py-1 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 text-[10px] font-black transition-colors flex items-center gap-1"
                         >
-                          {locale === 'ar' ? '➕ إضافة مواصفة للبديل' : '➕ Add Attribute'}
+                          <PlusIcon className="w-3 h-3" />
+                          <span>{locale === 'ar' ? 'إضافة مواصفة للبديل' : 'Add Attribute'}</span>
                         </button>
                         <span className="text-[10px] font-black text-slate-500">
                           {locale === 'ar' ? 'مواصفات هذا البديل:' : 'Variant Attributes:'}
@@ -819,9 +979,9 @@ export default function AdminProductsPage() {
                           <button
                             type="button"
                             onClick={() => handleRemoveAttributeFromVariant(idx)}
-                            className="p-2 text-rose-600 hover:bg-rose-50 rounded text-xs font-black border border-rose-100"
+                            className="p-2 text-rose-600 hover:bg-rose-50 rounded text-xs font-black border border-rose-100 flex items-center justify-center"
                           >
-                            🗑️
+                            <TrashIcon className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       ))}
@@ -832,11 +992,19 @@ export default function AdminProductsPage() {
                     <button
                       type="button"
                       onClick={handleAddVariant}
-                      className="flex-1 py-2 rounded-xl bg-primary text-white font-extrabold text-xs shadow-sm hover:shadow transition-all"
+                      className="flex-1 py-2 rounded-xl bg-primary text-white font-extrabold text-xs shadow-sm hover:shadow transition-all flex items-center justify-center gap-1.5"
                     >
-                      {editingVariantSku
-                        ? (locale === 'ar' ? '💾 حفظ تعديلات البديل' : '💾 Save Variant Changes')
-                        : (locale === 'ar' ? '📥 إضافة البديل للمنتج الحالي' : '📥 Add Variant to Product')}
+                      {editingVariantSku ? (
+                        <>
+                          <SaveIcon className="w-3.5 h-3.5" />
+                          <span>{locale === 'ar' ? 'حفظ تعديلات البديل' : 'Save Variant Changes'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <PlusIcon className="w-3.5 h-3.5" />
+                          <span>{locale === 'ar' ? 'إضافة البديل للمنتج الحالي' : 'Add Variant to Product'}</span>
+                        </>
+                      )}
                     </button>
                     {editingVariantSku && (
                       <button
@@ -863,16 +1031,18 @@ export default function AdminProductsPage() {
                             <button
                               type="button"
                               onClick={() => handleEditVariant(v)}
-                              className="px-3 py-1.5 rounded-xl border border-amber-200 text-amber-600 hover:bg-amber-50 text-xs font-black transition-colors"
+                              className="px-3 py-1.5 rounded-xl border border-amber-200 text-amber-600 hover:bg-amber-50 text-xs font-black transition-colors flex items-center gap-1"
                             >
-                              ✏️ {locale === 'ar' ? 'تعديل' : 'Edit'}
+                              <EditIcon className="w-3.5 h-3.5" />
+                              <span>{locale === 'ar' ? 'تعديل' : 'Edit'}</span>
                             </button>
                             <button
                               type="button"
                               onClick={() => handleRemoveVariant(v.sku)}
-                              className="px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-black transition-colors"
+                              className="px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-black transition-colors flex items-center gap-1"
                             >
-                              🗑️ {locale === 'ar' ? 'إزالة' : 'Remove'}
+                              <TrashIcon className="w-3.5 h-3.5" />
+                              <span>{locale === 'ar' ? 'إزالة' : 'Remove'}</span>
                             </button>
                           </div>
                           
@@ -900,6 +1070,9 @@ export default function AdminProductsPage() {
                                 {locale === 'ar' ? 'سعر الجملة:' : 'Wholesale Price:'} <span className="text-emerald-700 font-black">{v.price} ج.م</span>
                               </span>
                               <span>
+                                {locale === 'ar' ? 'سعر الشراء:' : 'Purchase Price:'} <span className="text-blue-750 font-black">{v.purchasePrice || 0} ج.م</span>
+                              </span>
+                              <span>
                                 {locale === 'ar' ? 'المخزون:' : 'Stock:'} <span className="text-slate-800 font-black">{v.stockQuantity}</span>
                               </span>
                             </div>
@@ -909,8 +1082,9 @@ export default function AdminProductsPage() {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs font-black text-rose-600">
-                    ⚠️ {locale === 'ar' ? 'يجب عليك إضافة بديل واحد على الأقل للمنتج لحفظه بنجاح.' : 'You must configure at least one variant to create the product.'}
+                  <p className="text-xs font-black text-rose-600 flex items-center gap-1.5 justify-end">
+                    <span>{locale === 'ar' ? 'يجب عليك إضافة بديل واحد على الأقل للمنتج لحفظه بنجاح.' : 'You must configure at least one variant to create the product.'}</span>
+                    <WarningIcon className="w-4 h-4 text-rose-500" />
                   </p>
                 )}
               </div>
@@ -927,7 +1101,10 @@ export default function AdminProductsPage() {
                     <span>{locale === 'ar' ? 'جاري حفظ التغييرات...' : 'Saving changes...'}</span>
                   </>
                 ) : (
-                  <span>✅ {locale === 'ar' ? 'حفظ ونشر التغييرات' : 'Save & Publish Changes'}</span>
+                  <>
+                    <span>{locale === 'ar' ? 'حفظ ونشر التغييرات' : 'Save & Publish Changes'}</span>
+                    <CheckCircleIcon className="w-4 h-4 fill-white text-primary" />
+                  </>
                 )}
               </button>
             </form>

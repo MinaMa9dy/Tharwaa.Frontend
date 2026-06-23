@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLocale } from '@/shared/context/LocaleContext';
+import { CloseIcon, SparklesIcon } from '@/shared/components/Icons';
+
 
 export default function LandingPage() {
   const { t, locale, setLocale, dir } = useLocale();
@@ -104,9 +106,9 @@ export default function LandingPage() {
               </div>
               <button 
                 onClick={() => setIsMenuOpen(false)} 
-                className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:text-slate-700 text-sm font-bold transition-colors"
+                className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:text-slate-700 transition-colors"
               >
-                ✕
+                <CloseIcon className="w-4 h-4" />
               </button>
             </div>
             <nav className="flex flex-col gap-5 text-base font-bold text-slate-700">
@@ -120,7 +122,12 @@ export default function LandingPage() {
               onClick={() => { setLocale(locale === 'ar' ? 'en' : 'ar'); setIsMenuOpen(false); }}
               className="w-full py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
             >
-              🌐 {locale === 'ar' ? 'English' : 'العربية'}
+              <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                <path d="M2 12h20" />
+              </svg>
+              {locale === 'ar' ? 'English' : 'العربية'}
             </button>
             <Link 
               href="/login" 
@@ -161,7 +168,7 @@ export default function LandingPage() {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
                 <Link
-                  href="/register"
+                  href="/login"
                   className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-white font-bold text-lg px-8 py-4 rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/30 hover:-translate-y-0.5 transition-all text-center"
                 >
                   {t('startNow')}
@@ -250,28 +257,44 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8 relative">
             {/* Step Card 1 */}
             <div className="bg-slate-50 hover:bg-white border border-slate-100 hover:border-slate-200 p-4 sm:p-8 rounded-2xl sm:rounded-3xl hover:shadow-xl transition-all duration-300 relative group">
-              <span className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-indigo-50 flex items-center justify-center text-xl sm:text-2xl mb-4 sm:mb-6 group-hover:scale-110 transition-transform">📝</span>
+              <span className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-indigo-50 flex items-center justify-center mb-4 sm:mb-6 group-hover:scale-110 transition-transform">
+                <svg className="w-5 h-5 sm:w-7 sm:h-7 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </span>
               <h3 className="text-sm sm:text-xl font-bold text-slate-800 mb-2 sm:mb-3">{t('step1Title')}</h3>
               <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">{t('step1Desc')}</p>
             </div>
 
             {/* Step Card 2 */}
             <div className="bg-slate-50 hover:bg-white border border-slate-100 hover:border-slate-200 p-4 sm:p-8 rounded-2xl sm:rounded-3xl hover:shadow-xl transition-all duration-300 relative group">
-              <span className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-emerald-50 flex items-center justify-center text-xl sm:text-2xl mb-4 sm:mb-6 group-hover:scale-110 transition-transform">🛍️</span>
+              <span className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-emerald-50 flex items-center justify-center mb-4 sm:mb-6 group-hover:scale-110 transition-transform">
+                <svg className="w-5 h-5 sm:w-7 sm:h-7 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+              </span>
               <h3 className="text-sm sm:text-xl font-bold text-slate-800 mb-2 sm:mb-3">{t('step2Title')}</h3>
               <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">{t('step2Desc')}</p>
             </div>
 
             {/* Step Card 3 */}
             <div className="bg-slate-50 hover:bg-white border border-slate-100 hover:border-slate-200 p-4 sm:p-8 rounded-2xl sm:rounded-3xl hover:shadow-xl transition-all duration-300 relative group">
-              <span className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-amber-50 flex items-center justify-center text-xl sm:text-2xl mb-4 sm:mb-6 group-hover:scale-110 transition-transform">📞</span>
+              <span className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-amber-50 flex items-center justify-center mb-4 sm:mb-6 group-hover:scale-110 transition-transform">
+                <svg className="w-5 h-5 sm:w-7 sm:h-7 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+              </span>
               <h3 className="text-sm sm:text-xl font-bold text-slate-800 mb-2 sm:mb-3">{t('step3Title')}</h3>
               <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">{t('step3Desc')}</p>
             </div>
 
             {/* Step Card 4 */}
             <div className="bg-slate-50 hover:bg-white border border-slate-100 hover:border-slate-200 p-4 sm:p-8 rounded-2xl sm:rounded-3xl hover:shadow-xl transition-all duration-300 relative group">
-              <span className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center text-xl sm:text-2xl mb-4 sm:mb-6 group-hover:scale-110 transition-transform">💰</span>
+              <span className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center mb-4 sm:mb-6 group-hover:scale-110 transition-transform">
+                <svg className="w-5 h-5 sm:w-7 sm:h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </span>
               <h3 className="text-sm sm:text-xl font-bold text-slate-800 mb-2 sm:mb-3">{t('step4Title')}</h3>
               <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">{t('step4Desc')}</p>
             </div>
@@ -380,8 +403,9 @@ export default function LandingPage() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto space-y-4 mb-20">
-            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider">
-              ⭐ {locale === 'ar' ? 'مميزات المنصة' : 'Platform Features'}
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider">
+              <SparklesIcon className="w-3.5 h-3.5" />
+              {locale === 'ar' ? 'مميزات المنصة' : 'Platform Features'}
             </span>
             <h2 className="text-3xl sm:text-4xl font-black text-slate-800 tracking-tight">
               {t('whyTharwaa')}
@@ -396,32 +420,58 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {[
               {
-                icon: '💳',
+                icon: (
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <rect width="18" height="12" x="3" y="6" rx="2" />
+                    <path d="M3 10h18" />
+                    <path d="M7 14h2" />
+                  </svg>
+                ),
                 titleKey: 'featuresNoCapital',
                 descKey: 'featuresNoCapitalDesc',
               },
               {
-                icon: '🚀',
+                icon: (
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                ),
                 titleKey: 'featuresFastDelivery',
                 descKey: 'featuresFastDeliveryDesc',
               },
               {
-                icon: '📈',
+                icon: (
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                ),
                 titleKey: 'featuresHighMargins',
                 descKey: 'featuresHighMarginsDesc',
               },
               {
-                icon: '💰',
+                icon: (
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ),
                 titleKey: 'featuresInstantWithdrawal',
                 descKey: 'featuresInstantWithdrawalDesc',
               },
               {
-                icon: '✨',
+                icon: (
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                  </svg>
+                ),
                 titleKey: 'featuresReadyContent',
                 descKey: 'featuresReadyContentDesc',
               },
               {
-                icon: '☎️',
+                icon: (
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M5.636 5.636a9 9 0 000 12.728m0 0l2.829-2.829m-2.829 2.829L3 21M12 12a3 3 0 100-6 3 3 0 000 6z" />
+                  </svg>
+                ),
                 titleKey: 'featuresSupport',
                 descKey: 'featuresSupportDesc',
               },

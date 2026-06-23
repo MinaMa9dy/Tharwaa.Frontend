@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocale } from '@/shared/context/LocaleContext';
 import { settingsService } from '@/features/settings/api/settingsService';
+import { SaveIcon } from '@/shared/components/Icons';
 
 export default function SystemSettingsPage() {
   const { locale, dir } = useLocale();
@@ -120,7 +121,10 @@ export default function SystemSettingsPage() {
                   <span>{locale === 'ar' ? 'جاري حفظ التغييرات...' : 'Saving Changes...'}</span>
                 </>
               ) : (
-                <span>💾 {locale === 'ar' ? 'حفظ إعدادات النظام' : 'Save System Settings'}</span>
+                <span className="flex items-center gap-1.5">
+                  <SaveIcon className="w-4 h-4" />
+                  <span>{locale === 'ar' ? 'حفظ إعدادات النظام' : 'Save System Settings'}</span>
+                </span>
               )}
             </button>
           </form>

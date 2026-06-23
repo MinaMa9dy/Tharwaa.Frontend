@@ -4,6 +4,8 @@ export enum OrderStatus {
   Shipped = 'Shipped',
   Delivered = 'Delivered',
   Cancelled = 'Cancelled',
+  ConfirmationFailed = 'ConfirmationFailed',
+  DeliveryFailed = 'DeliveryFailed',
 }
 
 export interface AddressDto {
@@ -40,7 +42,7 @@ export interface OrderDto {
   status: OrderStatus;
   cancellationReason?: string;
   notes?: string;
-  createdAt: string;
+  createdTime: string;
   totalAmount: number;
   totalCost: number;
   commission: number;
@@ -59,6 +61,7 @@ export interface CreateOrderDto {
   customerPhone: string;
   shippingAddress: AddressDto;
   items: CreateOrderItemDto[];
+  notes?: string;
 }
 
 export interface CancelOrderDto {

@@ -6,11 +6,22 @@ import { useLocale } from '@/shared/context/LocaleContext';
 import { useCartStore } from '@/features/cart/store/cartStore';
 import { orderService } from '@/features/orders/api/orderService';
 import { CartItemDto } from '@/shared/types/cart';
+import { env } from '@/shared/config/env';
 import { toast } from 'react-hot-toast';
+import { TrashIcon, CartIcon } from '@/shared/components/Icons';
+
 
 export default function CartPage() {
   const { locale, dir } = useLocale();
   const { cart, loading, error, fetchCart, updateQty, removeItem, clearCart } = useCartStore();
+
+  const getImageUrl = (url?: string) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    const apiBase = env.apiUrl.replace(/\/api$/, '');
+    const cleanUrl = url.startsWith('/') ? url.slice(1) : url;
+    return `${apiBase}/${cleanUrl}`;
+  };
 
   // Checkout form state
   const [customerName, setCustomerName] = useState('');
@@ -18,6 +29,7 @@ export default function CartPage() {
   const [street, setStreet] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
+  const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<string | null>(null);
   const [governorates, setGovernorates] = useState<{ id: number; name: string; nameAr: string }[]>([]);
@@ -65,12 +77,14 @@ export default function CartPage() {
           country: locale === 'ar' ? 'مصر' : 'Egypt',
         },
         items: itemsPayload,
+        notes: notes || undefined,
       });
 
       if (res.success) {
         toast.success(locale === 'ar' ? 'تم إنشاء الطلب وتأكيده للشحن!' : 'Order created and shipped successfully!');
         setOrderSuccess(locale === 'ar' ? `تم إنشاء الطلب بنجاح برقم: #${res.data?.id}` : `Order created successfully: #${res.data?.id}`);
         clearCart();
+        setNotes('');
       } else {
         toast.error(res.message || (locale === 'ar' ? 'فشل إتمام الطلب' : 'Failed to submit order'));
       }
@@ -102,14 +116,19 @@ export default function CartPage() {
             }}
             className="px-4 py-2 rounded-xl text-xs font-black text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 transition-all border border-rose-100 flex items-center gap-1.5 cursor-pointer"
           >
-            🗑️ {locale === 'ar' ? 'تفريغ السلة بالكامل' : 'Clear All'}
+            <TrashIcon className="w-3.5 h-3.5" />
+            <span>{locale === 'ar' ? 'تفرغ السلة بالكامل' : 'Clear All'}</span>
           </button>
         )}
       </div>
 
       {orderSuccess ? (
         <div className="p-10 sm:p-12 text-center space-y-6 bg-gradient-to-b from-emerald-50/50 to-emerald-50 rounded-3xl border border-emerald-100 max-w-xl mx-auto shadow-xl shadow-emerald-500/5 animate-scaleUp">
-          <span className="text-5xl sm:text-6xl animate-bounce inline-block">📦</span>
+          <div className="flex justify-center mb-2">
+            <svg className="w-16 h-16 text-emerald-500 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          </div>
           <h3 className="text-xl sm:text-2xl font-black text-slate-800">{locale === 'ar' ? 'تم تقديم طلبك بنجاح!' : 'Order Placed!'}</h3>
           <p className="text-xs sm:text-sm font-bold text-emerald-800 bg-emerald-100/50 py-2.5 px-4 rounded-2xl border border-emerald-200/50 inline-block">{orderSuccess}</p>
           <div className="pt-4 flex gap-4 justify-center">
@@ -123,7 +142,9 @@ export default function CartPage() {
         </div>
       ) : activeItems.length === 0 ? (
         <div className="text-center py-20 sm:py-24 bg-white rounded-3xl border border-slate-200 space-y-5 shadow-sm max-w-2xl mx-auto">
-          <div className="w-20 h-20 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner">🛒</div>
+          <div className="w-20 h-20 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400 shadow-inner">
+            <CartIcon className="w-10 h-10" />
+          </div>
           <h3 className="text-lg sm:text-xl font-black text-slate-800">{locale === 'ar' ? 'سلتك فارغة حالياً' : 'Your cart is empty'}</h3>
           <p className="text-slate-400 text-xs sm:text-sm font-bold max-w-sm mx-auto leading-relaxed">{locale === 'ar' ? 'تصفح كتالوج المنتجات وابدأ في إضافة المنتجات لتحديد أسعار بيعها وتأكيد طلباتك.' : 'Go to catalog and configure items.'}</p>
           <div className="pt-3">
@@ -151,7 +172,7 @@ export default function CartPage() {
                         <div className="w-12 h-12 rounded-2xl border border-slate-200 overflow-hidden shadow-inner shrink-0 relative bg-slate-50 flex items-center justify-center">
                           {item.productPhotoUrl ? (
                             <img
-                              src={item.productPhotoUrl}
+                              src={getImageUrl(item.productPhotoUrl)}
                               alt={item.productName}
                               className="w-full h-full object-cover"
                             />
@@ -214,7 +235,7 @@ export default function CartPage() {
                           className="p-2 text-slate-400 hover:text-rose-500 rounded-xl hover:bg-rose-50 border border-transparent hover:border-rose-100 transition-all shrink-0"
                           title={locale === 'ar' ? 'حذف' : 'Delete'}
                         >
-                          🗑️
+                          <TrashIcon className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -317,6 +338,16 @@ export default function CartPage() {
                   onChange={(e) => setStreet(e.target.value)}
                   placeholder={locale === 'ar' ? 'مثال: شارع الثورة، عمارة 5، شقة 2' : 'Street name, building, floor'}
                   className="w-full text-right p-3 rounded-xl border border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/5 focus:outline-none text-xs font-bold transition-all"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-black text-slate-600">{locale === 'ar' ? 'ملاحظات إضافية (اختياري):' : 'Additional Notes (Optional):'}</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder={locale === 'ar' ? 'مثال: التسليم بعد الساعة 5 مساءً، أو أي تفاصيل خاصة بالشحن' : 'e.g. Delivery after 5 PM, or specific shipping details'}
+                  className="w-full text-right p-3 rounded-xl border border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/5 focus:outline-none text-xs font-bold transition-all min-h-[80px]"
                 />
               </div>
 

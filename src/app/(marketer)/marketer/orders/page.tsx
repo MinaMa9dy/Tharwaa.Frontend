@@ -6,6 +6,9 @@ import { useLocale } from '@/shared/context/LocaleContext';
 import { orderService } from '@/features/orders/api/orderService';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { OrderDto, OrderStatus } from '@/shared/types/order';
+import Pagination from '@/shared/components/Pagination';
+import { toast } from 'react-hot-toast';
+import { PlusIcon, SearchIcon, CloseIcon, FileIcon, PhoneIcon, MapPinIcon } from '@/shared/components/Icons';
 
 export default function MarketerOrdersPage() {
   const { locale, dir } = useLocale();
@@ -15,15 +18,53 @@ export default function MarketerOrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [pageSize] = useState(10);
+  const [mounted, setMounted] = useState(false);
+  const [cancelOrderId, setCancelOrderId] = useState<number | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
   useEffect(() => {
     initialize();
+    const params = new URLSearchParams(window.location.search);
+    const urlPage = parseInt(params.get('page') || '1', 10) || 1;
+    if (urlPage !== 1) {
+      setCurrentPage(urlPage);
+    }
+    setMounted(true);
   }, [initialize]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const urlPage = parseInt(params.get('page') || '1', 10) || 1;
+      setCurrentPage(urlPage);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const params = new URLSearchParams(window.location.search);
+    const urlPage = parseInt(params.get('page') || '1', 10) || 1;
+    if (currentPage !== urlPage) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('page', currentPage.toString());
+      window.history.pushState({}, '', url.toString());
+    }
+  }, [currentPage, mounted]);
 
   const loadOrders = async () => {
     setIsLoading(true);
     try {
-      const res = await orderService.getMyOrders(undefined, undefined, currentPage, pageSize);
+      const res = await orderService.getMyOrders(
+        statusFilter || undefined,
+        searchQuery || undefined,
+        currentPage,
+        pageSize
+      );
       if (res.success && res.data) {
         setOrders(res.data);
         setTotalPages(res.meta?.totalPages || 1);
@@ -39,11 +80,44 @@ export default function MarketerOrdersPage() {
     }
   };
 
-  useEffect(() => {
-    if (user) {
-      loadOrders();
+  const handleCancelOrder = (id: number) => {
+    setCancelOrderId(id);
+    setCancelReason('');
+  };
+
+  const handleConfirmCancelOrder = async () => {
+    if (cancelOrderId === null) return;
+    setIsCancelling(true);
+    try {
+      const res = await orderService.cancel(cancelOrderId, { reason: cancelReason || undefined });
+      if (res.success) {
+        toast.success(locale === 'ar' ? 'تم إلغاء الطلب بنجاح' : 'Order cancelled successfully');
+        setCancelOrderId(null);
+        await loadOrders();
+      } else {
+        toast.error(res.message || (locale === 'ar' ? 'فشل إلغاء الطلب' : 'Failed to cancel order'));
+      }
+    } catch (err: any) {
+      toast.error(locale === 'ar' ? `خطأ: ${err.message}` : `Error: ${err.message}`);
+    } finally {
+      setIsCancelling(false);
     }
-  }, [user, currentPage]);
+  };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const delayDebounceFn = setTimeout(() => {
+      if (user) {
+        loadOrders();
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [user, searchQuery, statusFilter, currentPage, mounted]);
 
   const getStatusColor = (status: OrderStatus) => {
     switch (status) {
@@ -57,6 +131,10 @@ export default function MarketerOrdersPage() {
         return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       case OrderStatus.Cancelled:
         return 'bg-rose-50 text-rose-700 border-rose-200';
+      case OrderStatus.ConfirmationFailed:
+        return 'bg-red-50 text-red-700 border-red-200';
+      case OrderStatus.DeliveryFailed:
+        return 'bg-rose-100 text-rose-800 border-rose-300';
       default:
         return 'bg-slate-50 text-slate-700 border-slate-200';
     }
@@ -70,8 +148,12 @@ export default function MarketerOrdersPage() {
       case OrderStatus.Shipped: return 'جاري الشحن';
       case OrderStatus.Delivered: return 'تم التوصيل';
       case OrderStatus.Cancelled: return 'ملغي';
+      case OrderStatus.ConfirmationFailed: return 'فشل التأكيد';
+      case OrderStatus.DeliveryFailed: return 'فشل التوصيل';
     }
   };
+
+  if (!mounted) return null;
 
   return (
     <div className="space-y-8 animate-fadeIn" dir={dir}>
@@ -86,13 +168,54 @@ export default function MarketerOrdersPage() {
         </div>
         <Link
           href="/marketer/products"
-          className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/95 text-white font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all"
+          className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/95 text-white font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-1.5"
         >
-          {locale === 'ar' ? '➕ تسويق منتج جديد' : '➕ Market New Product'}
+          <PlusIcon className="w-4 h-4" />
+          <span>{locale === 'ar' ? 'تسويق منتج جديد' : 'Market New Product'}</span>
         </Link>
       </div>
 
-      {isLoading ? (
+      {/* Search & Filter Controls */}
+      <div className="bg-white rounded-3xl border border-slate-200 p-5 flex flex-col sm:flex-row gap-4 items-center justify-between text-right shadow-sm">
+        <h3 className="font-black text-slate-800 text-sm shrink-0 flex items-center gap-1.5">
+          <SearchIcon className="w-4 h-4 text-slate-400" />
+          <span>{locale === 'ar' ? 'تصفح وبحث الطلبات' : 'Filter & Search Orders'}</span>
+        </h3>
+        
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+          {/* Status Filter Dropdown */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="text-right px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer w-full sm:w-auto"
+          >
+            <option value="">{locale === 'ar' ? 'كل الحالات' : 'All Statuses'}</option>
+            <option value="Pending">{locale === 'ar' ? 'قيد الانتظار' : 'Pending'}</option>
+            <option value="Confirmed">{locale === 'ar' ? 'تم التأكيد' : 'Confirmed'}</option>
+            <option value="Shipped">{locale === 'ar' ? 'جاري الشحن' : 'Shipped'}</option>
+            <option value="Delivered">{locale === 'ar' ? 'تم التوصيل' : 'Delivered'}</option>
+            <option value="Cancelled">{locale === 'ar' ? 'ملغي' : 'Cancelled'}</option>
+            <option value="ConfirmationFailed">{locale === 'ar' ? 'فشل التأكيد' : 'Confirmation Failed'}</option>
+            <option value="DeliveryFailed">{locale === 'ar' ? 'فشل التوصيل' : 'Delivery Failed'}</option>
+          </select>
+
+          {/* Search Query Input */}
+          <div className="relative w-full sm:w-64">
+            <span className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
+              <SearchIcon className="w-4 h-4" />
+            </span>
+            <input
+              type="text"
+              placeholder={locale === 'ar' ? 'ابحث برقم الطلب، اسم العميل...' : 'Search by order ID, customer...'}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full text-right pr-9 pl-3 py-2 text-xs font-bold rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 text-slate-700 placeholder-slate-400"
+            />
+          </div>
+        </div>
+      </div>
+
+      {isLoading && orders.length === 0 ? (
         <div className="space-y-4">
           {[1, 2].map((n) => (
             <div key={n} className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4 animate-pulse">
@@ -106,12 +229,22 @@ export default function MarketerOrdersPage() {
         </div>
       ) : orders.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-3xl border border-slate-200 space-y-4">
-          <span className="text-5xl">📄</span>
-          <h3 className="text-lg font-black text-slate-700">{locale === 'ar' ? 'لا توجد طلبات مسجلة بعد' : 'No orders recorded yet'}</h3>
-          <p className="text-slate-400 text-sm font-bold">{locale === 'ar' ? 'ابدأ بتسويق المنتجات وتسجيل أول طلب لعميلك.' : 'Place your first order to get started.'}</p>
+          <div className="flex justify-center mb-2">
+            <FileIcon className="w-14 h-14 text-slate-300" />
+          </div>
+          <h3 className="text-lg font-black text-slate-700">
+            {searchQuery || statusFilter
+              ? (locale === 'ar' ? 'لا توجد نتائج تطابق بحثك' : 'No matches found for your search')
+              : (locale === 'ar' ? 'لا توجد طلبات مسجلة بعد' : 'No orders recorded yet')}
+          </h3>
+          <p className="text-slate-400 text-sm font-bold">
+            {searchQuery || statusFilter
+              ? (locale === 'ar' ? 'جرب البحث بكلمة أخرى أو تغيير الفلتر' : 'Try searching for something else or clearing filters')
+              : (locale === 'ar' ? 'ابدأ بتسويق المنتجات وتسجيل أول طلب لعميلك.' : 'Place your first order to get started.')}
+          </p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className={`space-y-6 transition-opacity duration-200 ${isLoading ? 'opacity-65 pointer-events-none' : ''}`}>
           {orders.map((order) => (
             <div
               key={order.id}
@@ -123,7 +256,7 @@ export default function MarketerOrdersPage() {
                     #{order.id}
                   </span>
                   <span className="text-xs font-bold text-slate-400">
-                    {new Date(order.createdAt).toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-US')}
+                    {new Date(order.createdTime).toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-US')}
                   </span>
                 </div>
                 
@@ -131,6 +264,16 @@ export default function MarketerOrdersPage() {
                   <span className={`px-3 py-1 rounded-xl text-xs font-black border ${getStatusColor(order.status)}`}>
                     {getStatusText(order.status)}
                   </span>
+                  {order.status === OrderStatus.Pending && (
+                    <button
+                      type="button"
+                      onClick={() => handleCancelOrder(order.id)}
+                      className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-100 transition-all cursor-pointer shadow-sm hover:shadow flex items-center gap-1"
+                    >
+                      <CloseIcon className="w-3 h-3" />
+                      <span>{locale === 'ar' ? 'إلغاء الطلب' : 'Cancel Order'}</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -139,8 +282,26 @@ export default function MarketerOrdersPage() {
                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">{locale === 'ar' ? 'بيانات العميل' : 'Customer'}</h4>
                   <div className="space-y-1 text-sm font-bold text-slate-700">
                     <p className="text-slate-900 font-black">{order.customerName}</p>
-                    <p>📱 {order.customerPhone}</p>
-                    <p>📍 {order.shippingAddress.street}، {order.shippingAddress.city}، {order.shippingAddress.state}</p>
+                    <p className="flex items-center gap-1.5">
+                      <PhoneIcon className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{order.customerPhone}</span>
+                    </p>
+                    <p className="flex items-center gap-1.5">
+                      <MapPinIcon className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{order.shippingAddress.street}، {order.shippingAddress.city}، {order.shippingAddress.state}</span>
+                    </p>
+                    {order.notes && (
+                      <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded-xl border border-amber-100 mt-2 font-bold flex items-center gap-1.5 w-fit">
+                        <FileIcon className="w-3.5 h-3.5 text-amber-600" />
+                        <span>{locale === 'ar' ? 'ملاحظات: ' : 'Notes: '} {order.notes}</span>
+                      </p>
+                    )}
+                    {order.cancellationReason && (
+                      <p className="text-xs text-rose-600 bg-rose-50 p-2 rounded-xl border border-rose-100 mt-2 font-bold flex items-center gap-1.5 w-fit">
+                        <CloseIcon className="w-3.5 h-3.5 text-rose-600" />
+                        <span>{locale === 'ar' ? 'سبب الإلغاء/الفشل: ' : 'Reason: '} {order.cancellationReason}</span>
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -201,34 +362,75 @@ export default function MarketerOrdersPage() {
 
           {/* Pagination controls */}
           {!isLoading && orders.length > 0 && (
-            <div className="flex items-center justify-center gap-4 p-6 border border-slate-200 bg-white rounded-3xl shadow-sm">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Nice Cancellation Modal Replacement */}
+      {cancelOrderId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto animate-fadeIn" dir={dir}>
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full border border-slate-200/50 p-6 text-right animate-scaleIn space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-lg font-black text-slate-800">
+                {locale === 'ar' ? 'إلغاء الطلب' : 'Cancel Order'}
+              </h3>
               <button
-                onClick={() => {
-                  setCurrentPage(p => Math.max(1, p - 1));
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                disabled={currentPage === 1}
-                className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-extrabold text-xs sm:text-sm disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+                onClick={() => setCancelOrderId(null)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:text-slate-700 cursor-pointer"
               >
-                {locale === 'ar' ? 'الصفحة السابقة ➡️' : '⬅️ Previous'}
-              </button>
-              
-              <span className="text-xs sm:text-sm font-black text-slate-600 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200/50">
-                {locale === 'ar' ? `الصفحة ${currentPage}` : `Page ${currentPage}`}
-              </span>
-              
-              <button
-                onClick={() => {
-                  setCurrentPage(p => p + 1);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                disabled={currentPage >= totalPages}
-                className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-extrabold text-xs sm:text-sm disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
-              >
-                {locale === 'ar' ? '⬅️ الصفحة التالية' : 'Next ➡️'}
+                <CloseIcon className="w-4 h-4" />
               </button>
             </div>
-          )}
+
+            <div className="space-y-2">
+              <p className="text-sm font-bold text-slate-600">
+                {locale === 'ar' 
+                  ? 'هل أنت متأكد من رغبتك في إلغاء هذا الطلب؟ يرجى كتابة سبب الإلغاء:' 
+                  : 'Are you sure you want to cancel this order? Please enter the cancellation reason:'}
+              </p>
+              <textarea
+                rows={3}
+                required
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder={locale === 'ar' ? 'مثال: العميل غير رأيه، خطأ في البيانات...' : 'e.g. Customer changed mind, incorrect data...'}
+                className="w-full text-right p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 text-xs font-bold bg-white text-slate-800"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isCancelling || !cancelReason.trim()}
+                onClick={handleConfirmCancelOrder}
+                className="flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isCancelling ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>{locale === 'ar' ? 'جاري الإلغاء...' : 'Cancelling...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <CloseIcon className="w-3.5 h-3.5" />
+                    <span>{locale === 'ar' ? 'إلغاء الطلب نهائياً' : 'Cancel Order'}</span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCancelOrderId(null)}
+                className="py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs sm:text-sm transition-all cursor-pointer"
+              >
+                {locale === 'ar' ? 'التراجع' : 'Keep Order'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

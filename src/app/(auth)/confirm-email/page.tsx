@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import axios from 'axios';
 import { useLocale } from '@/shared/context/LocaleContext';
+import { WarningIcon } from '@/shared/components/Icons';
 
 const resendSchema = (t: (k: string) => string) => z.object({
   email: z.string()
@@ -117,11 +118,16 @@ function ConfirmEmailForm() {
 
       {status === 'success' && (
         <div className="space-y-6 text-center">
-          <div className="w-16 h-16 bg-emerald-50 border border-emerald-200 text-emerald-500 rounded-full flex items-center justify-center mx-auto text-3xl font-bold animate-bounce shadow-sm">
-            ✓
+          <div className="w-16 h-16 bg-emerald-50 border border-emerald-200 text-emerald-500 rounded-full flex items-center justify-center mx-auto animate-bounce shadow-sm">
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
           </div>
-          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-700 font-bold">
-            {t('confirmEmailSuccess')}
+          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-700 font-bold flex items-center justify-center gap-2">
+            <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>{t('confirmEmailSuccess')}</span>
           </div>
           <div className="pt-2">
             <Link href="/login" className="w-full inline-flex justify-center bg-primary hover:bg-primary-hover text-white font-bold text-base py-3.5 rounded-xl shadow-lg shadow-primary/10 hover:shadow-primary/25 transition-all">
@@ -134,14 +140,16 @@ function ConfirmEmailForm() {
       {(status === 'error' || status === 'idle') && (
         <div className="space-y-6">
           {status === 'error' && (
-            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700 font-semibold">
-              ⚠️ {errorMsg}
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700 font-semibold flex items-center gap-2">
+              <WarningIcon className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span>{errorMsg}</span>
             </div>
           )}
 
           {!userId || !token ? (
-            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700 font-semibold text-center">
-              ⚠️ {locale === 'ar' ? 'رابط تأكيد الحساب غير صالح أو مفقود.' : 'Account confirmation link is invalid or missing.'}
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700 font-semibold text-center flex items-center justify-center gap-2">
+              <WarningIcon className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span>{locale === 'ar' ? 'رابط تأكيد الحساب غير صالح أو مفقود.' : 'Account confirmation link is invalid or missing.'}</span>
             </div>
           ) : null}
 

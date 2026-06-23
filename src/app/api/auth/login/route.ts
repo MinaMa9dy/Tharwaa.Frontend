@@ -6,20 +6,20 @@ import { decodeJwt } from '@/shared/utils/jwt';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    
+
     // Call ASP.NET Core API
     const response = await axios.post(`${env.apiUrl}/Auth/login`, body);
-    
+
     if (!response.data.success) {
       return NextResponse.json(
         { success: false, message: response.data.message || 'فشلت عملية تسجيل الدخول' },
         { status: response.data.status || 400 }
       );
     }
-    
+
     const authData = response.data.data;
     const { accessToken, refreshToken } = authData;
-    
+
     // Decode claims
     const decoded = decodeJwt(accessToken);
     const userId = decoded?.sub || decoded?.['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || '';
@@ -36,13 +36,9 @@ export async function POST(request: Request) {
       role,
       isActive: true
     };
-    
+
     const res = NextResponse.json({ success: true, user });
-    
-    // Derive access token maxAge from the JWT exp claim
-    const now = Math.floor(Date.now() / 1000);
-    const accessTokenMaxAge = decoded?.exp ? decoded.exp - now : 15 * 60; // fallback: 15 min
-    
+
     // Set Access Token cookie
     res.cookies.set('access_token', accessToken, {
       httpOnly: true,
@@ -51,7 +47,7 @@ export async function POST(request: Request) {
       path: '/',
       maxAge: 7 * 24 * 60 * 60, // 7 days
     });
-    
+
     // Set Refresh Token cookie
     res.cookies.set('refresh_token', refreshToken, {
       httpOnly: true,
@@ -60,7 +56,7 @@ export async function POST(request: Request) {
       path: '/',
       maxAge: 7 * 24 * 60 * 60, // 7 days
     });
-    
+
     return res;
   } catch (error: any) {
     const status = error.response?.status || 500;

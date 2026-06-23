@@ -6,6 +6,7 @@ import { useLocale } from '@/shared/context/LocaleContext';
 import { marketerService } from '@/features/marketers/api/marketerService';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { MarketerStatsDto } from '@/shared/types/marketer';
+import { SparklesIcon } from '@/shared/components/Icons';
 
 export default function MarketerDashboardPage() {
   const { locale, dir } = useLocale();
@@ -81,7 +82,12 @@ export default function MarketerDashboardPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-900 text-white flex flex-col justify-between text-right space-y-3 sm:space-y-4 shadow-xl shadow-slate-900/10">
-          <span className="text-xl sm:text-2xl">💰</span>
+          <span className="w-8 h-8 rounded-lg bg-white/10 text-emerald-400 flex items-center justify-center">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <rect width="20" height="14" x="2" y="5" rx="2" />
+              <line x1="2" x2="22" y1="10" y2="10" />
+            </svg>
+          </span>
           <div className="space-y-1">
             <span className="text-[10px] sm:text-xs font-black text-slate-400 block">{locale === 'ar' ? 'إجمالي الأرباح والعمولات' : 'Total commission'}</span>
             <span className="text-xl sm:text-3xl font-black text-emerald-400">
@@ -91,7 +97,12 @@ export default function MarketerDashboardPage() {
         </div>
 
         <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-slate-200 flex flex-col justify-between text-right space-y-3 sm:space-y-4 shadow-sm">
-          <span className="text-xl sm:text-2xl">💳</span>
+          <span className="w-8 h-8 rounded-lg bg-slate-50 text-slate-500 flex items-center justify-center">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <rect width="18" height="12" x="3" y="6" rx="2" />
+              <path d="M3 10h18" />
+            </svg>
+          </span>
           <div className="space-y-1">
             <span className="text-[10px] sm:text-xs font-black text-slate-400 block">{locale === 'ar' ? 'الرصيد المتاح للسحب' : 'Available Balance'}</span>
             <span className="text-xl sm:text-3xl font-black text-slate-800">
@@ -101,7 +112,11 @@ export default function MarketerDashboardPage() {
         </div>
 
         <div className="col-span-2 lg:col-span-1 p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-slate-200 flex flex-col justify-between text-right space-y-3 sm:space-y-4 shadow-sm">
-          <span className="text-xl sm:text-2xl">📦</span>
+          <span className="w-8 h-8 rounded-lg bg-slate-50 text-slate-500 flex items-center justify-center">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          </span>
           <div className="space-y-1">
             <span className="text-[10px] sm:text-xs font-black text-slate-400 block">{locale === 'ar' ? 'إجمالي الطلبات' : 'Total orders'}</span>
             <span className="text-xl sm:text-3xl font-black text-slate-800">
@@ -119,7 +134,10 @@ export default function MarketerDashboardPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 pt-2">
           <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-emerald-50 border border-emerald-100 space-y-2">
             <div className="flex justify-between items-center text-emerald-800 text-[10px] sm:text-xs font-black">
-              <span>🎉 {locale === 'ar' ? 'مكتمل' : 'Delivered'}</span>
+              <span className="flex items-center gap-1">
+                <SparklesIcon className="w-3.5 h-3.5" />
+                <span>{locale === 'ar' ? 'مكتمل' : 'Delivered'}</span>
+              </span>
               <span>{Math.round((stats.deliveredOrders / (stats.totalOrders || 1)) * 100)}%</span>
             </div>
             <p className="text-lg sm:text-2xl font-black text-emerald-600">
@@ -129,7 +147,12 @@ export default function MarketerDashboardPage() {
 
           <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-amber-50 border border-amber-100 space-y-2">
             <div className="flex justify-between items-center text-amber-800 text-[10px] sm:text-xs font-black">
-              <span>⏳ {locale === 'ar' ? 'قيد الشحن' : 'Pending'}</span>
+              <span className="flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{locale === 'ar' ? 'قيد الشحن' : 'Pending'}</span>
+              </span>
               <span>{Math.round(((stats.totalOrders - stats.deliveredOrders - stats.cancelledOrders) / (stats.totalOrders || 1)) * 100)}%</span>
             </div>
             <p className="text-lg sm:text-2xl font-black text-amber-600">
@@ -139,7 +162,12 @@ export default function MarketerDashboardPage() {
 
           <div className="col-span-2 sm:col-span-1 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-rose-50 border border-rose-100 space-y-2">
             <div className="flex justify-between items-center text-rose-800 text-[10px] sm:text-xs font-black">
-              <span>❌ {locale === 'ar' ? 'ملغي' : 'Cancelled'}</span>
+              <span className="flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <span>{locale === 'ar' ? 'ملغي' : 'Cancelled'}</span>
+              </span>
               <span>{Math.round((stats.cancelledOrders / (stats.totalOrders || 1)) * 100)}%</span>
             </div>
             <p className="text-lg sm:text-2xl font-black text-rose-600">
@@ -149,7 +177,9 @@ export default function MarketerDashboardPage() {
         </div>
 
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-xs sm:text-sm font-bold text-slate-500 flex items-center gap-2">
-          <span>💡</span>
+          <svg className="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+          </svg>
           <p>
             {locale === 'ar'
               ? 'معدل توصيل طلباتك الحالي مرتفع! استهدف تقليل المرتجعات عبر تأكيد العنوان وتفاصيل المنتج هاتفياً مع العميل قبل الشحن.'

@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useLocale } from '@/shared/context/LocaleContext';
 import { useAuthStore } from '@/features/auth/store/authStore';
+import { WarningIcon } from '@/shared/components/Icons';
 
 const loginSchema = (t: (k: string) => string) => z.object({
   email: z.string().min(1, { message: t('emailRequired') || 'البريد الإلكتروني مطلوب' }).email({ message: t('invalidEmail') || 'بريد إلكتروني غير صالح' }),
@@ -137,8 +138,9 @@ export default function LoginPage() {
       </div>
 
       {errorMsg && (
-        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700 font-semibold">
-          ⚠️ {errorMsg}
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700 font-semibold flex items-center gap-2">
+          <WarningIcon className="w-4 h-4 text-amber-600 flex-shrink-0" />
+          <span>{errorMsg}</span>
         </div>
       )}
 
