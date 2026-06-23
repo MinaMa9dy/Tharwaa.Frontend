@@ -8,6 +8,8 @@ export interface WithdrawalDto {
   id: number;
   marketerId: string;
   marketerName?: string;
+  adminId?: string;
+  adminName?: string;
   amount: number;
   status: WithdrawalStatus;
   requestedAt: string;
