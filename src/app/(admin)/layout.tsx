@@ -202,7 +202,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         onClick={() => setIsMobileMenuOpen(false)}
       >
         <div
-          className={`absolute top-0 bottom-0 w-72 max-w-xs bg-slate-900 p-6 shadow-2xl flex flex-col justify-between transition-transform duration-300 ease-out overscroll-none ${
+          className={`absolute top-0 bottom-0 w-72 max-w-xs bg-slate-900 p-6 shadow-2xl flex flex-col justify-between transition-transform duration-300 ease-out overscroll-none overflow-y-auto ${
             dir === 'rtl' ? 'right-0' : 'left-0'
           } ${isMobileMenuOpen ? 'translate-x-0' : (dir === 'rtl' ? 'translate-x-full' : '-translate-x-full')}`}
           onClick={(e) => e.stopPropagation()}
