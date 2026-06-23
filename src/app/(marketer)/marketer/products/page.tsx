@@ -33,6 +33,38 @@ export default function ProductsPage() {
   // Categories ref and scroll helper for PC view
   const categoriesRef = useRef<HTMLDivElement>(null);
 
+  // Touch tracking refs for swipe gestures on mobile
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartX.current === null || touchEndX.current === null) return;
+    const diff = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 50;
+
+    if (Math.abs(diff) > minSwipeDistance) {
+      if (diff > 0) {
+        // Swiped left -> next slide
+        setActiveBannerIndex((prev) => (prev + 1) % banners.length);
+      } else {
+        // Swiped right -> prev slide
+        setActiveBannerIndex((prev) => (prev === 0 ? banners.length - 1 : prev - 1));
+      }
+    }
+
+    // Reset coordinates
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
+
   const scrollCategories = (direction: 'left' | 'right') => {
     if (categoriesRef.current) {
       const scrollAmount = 200;
@@ -240,7 +272,12 @@ export default function ProductsPage() {
     <div className="space-y-8 animate-fadeIn" dir={dir}>
       {/* Banner */}
       {banners.length > 0 ? (
-        <div className="relative w-full aspect-[3/1] rounded-3xl overflow-hidden shadow-xl shadow-slate-200/50 group border border-slate-200">
+        <div 
+          className="relative w-full aspect-[3/1] rounded-3xl overflow-hidden shadow-xl shadow-slate-200/50 group border border-slate-200"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           <div className="w-full h-full relative">
             {banners.map((b, idx) => (
               <img
