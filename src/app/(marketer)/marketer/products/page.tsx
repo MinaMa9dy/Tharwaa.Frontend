@@ -29,6 +29,7 @@ export default function ProductsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [banners, setBanners] = useState<BannerDto[]>([]);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+  const [isBannersLoading, setIsBannersLoading] = useState(true);
 
   // Categories ref and scroll helper for PC view
   const categoriesRef = useRef<HTMLDivElement>(null);
@@ -159,6 +160,7 @@ export default function ProductsPage() {
   // Load banners once on mount
   useEffect(() => {
     async function loadBanners() {
+      setIsBannersLoading(true);
       try {
         const res = await bannerService.getAll();
         if (res.success && res.data) {
@@ -166,6 +168,8 @@ export default function ProductsPage() {
         }
       } catch (err) {
         // Ignore errors
+      } finally {
+        setIsBannersLoading(false);
       }
     }
     loadBanners();
@@ -271,7 +275,9 @@ export default function ProductsPage() {
   return (
     <div className="space-y-8 animate-fadeIn" dir={dir}>
       {/* Banner */}
-      {banners.length > 0 ? (
+      {isBannersLoading ? (
+        <div className="w-full aspect-[3/1] rounded-3xl bg-slate-100 animate-pulse border border-slate-200" />
+      ) : banners.length > 0 ? (
         <div 
           className="relative w-full aspect-[3/1] rounded-3xl overflow-hidden shadow-xl shadow-slate-200/50 group border border-slate-200"
           onTouchStart={handleTouchStart}
