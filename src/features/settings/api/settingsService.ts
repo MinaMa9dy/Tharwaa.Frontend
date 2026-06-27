@@ -3,6 +3,7 @@ import { ApiResult } from '@/shared/types/api';
 
 export interface SystemSettingsDto {
   minimumWithdrawalAmount: number;
+  marketerPenaltyAmount: number;
 }
 
 export const settingsService = {

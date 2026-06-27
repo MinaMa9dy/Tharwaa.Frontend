@@ -8,6 +8,7 @@ import { SaveIcon } from '@/shared/components/Icons';
 export default function SystemSettingsPage() {
   const { locale, dir } = useLocale();
   const [minimumWithdrawalAmount, setMinimumWithdrawalAmount] = useState<number>(0);
+  const [marketerPenaltyAmount, setMarketerPenaltyAmount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -19,6 +20,7 @@ export default function SystemSettingsPage() {
         const res = await settingsService.get();
         if (res.success && res.data) {
           setMinimumWithdrawalAmount(res.data.minimumWithdrawalAmount);
+          setMarketerPenaltyAmount(res.data.marketerPenaltyAmount);
         }
       } catch (err: any) {
         console.error(err);
@@ -34,7 +36,7 @@ export default function SystemSettingsPage() {
     setIsSaving(true);
     setMessage(null);
     try {
-      const res = await settingsService.update({ minimumWithdrawalAmount });
+      const res = await settingsService.update({ minimumWithdrawalAmount, marketerPenaltyAmount });
       if (res.success) {
         setMessage({
           type: 'success',
@@ -107,6 +109,26 @@ export default function SystemSettingsPage() {
                 {locale === 'ar' 
                   ? 'لن يتمكن المسوقون من تقديم أي طلبات سحب أرباح إذا كانت أرباحهم المتاحة تقل عن هذه القيمة.' 
                   : 'Marketers will be blocked from requesting payouts if their available balance is below this threshold.'}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-black text-slate-600">
+                {locale === 'ar' ? 'قيمة الغرامة على المسوق عند فشل التوصيل (ج.م):' : 'Marketer Penalty for Failed Delivery (EGP):'}
+              </label>
+              <input
+                type="number"
+                min={0}
+                required
+                value={marketerPenaltyAmount}
+                onChange={(e) => setMarketerPenaltyAmount(parseFloat(e.target.value) || 0)}
+                className="w-full text-right p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/10 text-sm font-bold bg-slate-50 focus:bg-white transition-colors"
+                placeholder="مثال: 10"
+              />
+              <p className="text-slate-400 text-[10px] font-bold mt-1">
+                {locale === 'ar' 
+                  ? 'المبلغ الذي سيتم خصمه تلقائياً من رصيد المسوق إذا فشلت عملية التوصيل للمستهلك.' 
+                  : 'The amount deducted from the marketer balance automatically if order delivery fails.'}
               </p>
             </div>
 
