@@ -60,7 +60,7 @@ export default function ProductDetailsPage() {
           if (prod.variants && prod.variants.length > 0) {
             const first = prod.variants[0];
             setSelectedVariant(first);
-            setPriceToSell(first.price);
+            setPriceToSell(Math.max(first.price, first.lowestPriceToSell || 0));
             
             // Populate initial selected attributes
             const initialAttrs: Record<string, string> = {};
@@ -170,7 +170,7 @@ export default function ProductDetailsPage() {
       });
       setSelectedAttributes(syncedAttrs);
       setSelectedVariant(match);
-      setPriceToSell(match.price);
+      setPriceToSell(Math.max(match.price, match.lowestPriceToSell || 0));
     }
   };
 
@@ -194,8 +194,14 @@ export default function ProductDetailsPage() {
       return;
     }
 
-    if (priceToSell < (selectedVariant ? selectedVariant.price : product.price)) {
-      toast.error(locale === 'ar' ? 'سعر البيع لا يمكن أن يكون أقل من سعر الجملة' : 'Selling price cannot be less than wholesale price');
+    const minPrice = selectedVariant 
+      ? Math.max(selectedVariant.price, selectedVariant.lowestPriceToSell || 0)
+      : product.price;
+
+    if (priceToSell < minPrice) {
+      toast.error(locale === 'ar' 
+        ? `سعر البيع لا يمكن أن يكون أقل من الحد الأدنى (${minPrice} ج.م)` 
+        : `Selling price cannot be less than the minimum allowed price (${minPrice} EGP)`);
       return;
     }
 
@@ -477,16 +483,24 @@ export default function ProductDetailsPage() {
 
               <div className="space-y-1.5 text-right">
                 <label className="text-xs font-black text-slate-600 block">
-                  {locale === 'ar' ? 'سعر البيع المقترح للمستهلك (ج.م):' : 'Selling Price (EGP):'}
+                  {locale === 'ar' ? 'سعر البيع للمستهلك (ج.م):' : 'Selling Price (EGP):'}
                 </label>
                 <input
                   type="number"
-                  min={wholesalePrice}
+                  min={selectedVariant ? Math.max(selectedVariant.price, selectedVariant.lowestPriceToSell || 0) : product.price}
                   value={priceToSell}
                   onChange={(e) => setPriceToSell(parseFloat(e.target.value) || 0)}
                   className="w-full text-right p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/10 text-sm font-black bg-white"
                 />
               </div>
+
+              {selectedVariant && selectedVariant.lowestPriceToSell > selectedVariant.price && (
+                <p className="text-[10px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg p-1.5 font-bold">
+                  ⚠️ {locale === 'ar' 
+                    ? `سعر البيع لا يمكن أن يقل عن الحد الأدنى المحدد من المسؤول (${selectedVariant.lowestPriceToSell} ج.م)` 
+                    : `Selling price cannot be lower than the owner's minimum retail price (${selectedVariant.lowestPriceToSell} EGP)`}
+                </p>
+              )}
 
               <div className="flex justify-between items-center text-xs sm:text-sm font-black border-t border-slate-200 pt-3 text-emerald-700">
                 <span>+{profit.toLocaleString()} ج.م</span>
@@ -497,7 +511,7 @@ export default function ProductDetailsPage() {
             {/* Add to Cart button */}
             <button
               onClick={handleAddToCart}
-              disabled={isAddingToCart || stock <= 0}
+              disabled={isAddingToCart || stock <= 0 || priceToSell < (selectedVariant ? Math.max(selectedVariant.price, selectedVariant.lowestPriceToSell || 0) : product.price)}
               className="w-full py-4 rounded-2xl bg-primary hover:bg-primary/95 text-white font-extrabold text-sm sm:text-base shadow-md hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isAddingToCart ? (

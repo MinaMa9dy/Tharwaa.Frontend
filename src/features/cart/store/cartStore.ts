@@ -43,6 +43,16 @@ export const useCartStore = create<CartState>((set, get) => ({
       throw new Error("يجب اختيار نوع للمنتج");
     }
 
+    const matchingVariant = productDetails?.variants?.find((v: any) => v.id === finalVariantId) || productDetails?.productVariants?.find((v: any) => v.id === finalVariantId);
+    if (matchingVariant) {
+      const minPrice = Math.max(matchingVariant.price || 0, matchingVariant.lowestPriceToSell || 0);
+      if (sellingPrice < minPrice) {
+        const errorMsg = `سعر البيع لا يمكن أن يقل عن الحد الأدنى المحدد وهو ${minPrice} ج.م / Selling price cannot be less than ${minPrice} EGP`;
+        set({ error: errorMsg });
+        throw new Error(errorMsg);
+      }
+    }
+
     // Optimistic Update
     if (previousCart) {
       const existingItemIndex = previousCart.items.findIndex(i => i.productId === productId && (i.variantId === finalVariantId || i.productVariantId === finalVariantId));
