@@ -240,8 +240,14 @@ export default function ProductsPage() {
 
   const handleOpenVariantSelector = (product: ProductDto) => {
     setSelectedProduct(product);
-    setChosenVariantId(product.variants.length > 0 ? product.variants[0].id : undefined);
-    setCustomPrice(product.price);
+    const initialVariantId = product.variants.length > 0 ? product.variants[0].id : undefined;
+    setChosenVariantId(initialVariantId);
+    
+    const variant = product.variants.find(v => v.id === initialVariantId);
+    const variantPrice = variant?.price || product.price;
+    const variantLowest = variant?.lowestPriceToSell || 0;
+    setCustomPrice(Math.max(variantPrice, variantLowest));
+    
     setQuantity(1);
     setCartSuccessMessage(null);
     setIsAddingToCart(false);
@@ -440,7 +446,7 @@ export default function ProductsPage() {
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {filteredProducts.map((prod) => {
-            const mainImg = prod.files.find((f) => f.isMain)?.url || prod.files[0]?.url || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=600&q=80';
+            const mainImg = prod.files.find((f) => f.isMain)?.url || prod.files[0]?.url || '';
             
             return (
               <div
@@ -449,11 +455,17 @@ export default function ProductsPage() {
               >
                 <Link href={`/marketer/products/${prod.id}`} className="block">
                   <div className="relative aspect-square w-full bg-slate-50 overflow-hidden">
-                    <img
-                      src={getImageUrl(mainImg)}
-                      alt={prod.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
+                    {mainImg ? (
+                      <img
+                        src={getImageUrl(mainImg)}
+                        alt={prod.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400 text-4xl select-none">
+                        📦
+                      </div>
+                    )}
                   </div>
                 </Link>
 
@@ -531,11 +543,17 @@ export default function ProductsPage() {
               ) : (
                 <>
                   <div className="flex gap-4">
-                    <img
-                      src={getImageUrl(selectedProduct.files[0]?.url)}
-                      alt={selectedProduct.name}
-                      className="w-20 h-20 rounded-xl object-cover border border-slate-100"
-                    />
+                    {selectedProduct.files && selectedProduct.files[0]?.url ? (
+                      <img
+                        src={getImageUrl(selectedProduct.files[0]?.url)}
+                        alt={selectedProduct.name}
+                        className="w-20 h-20 rounded-xl object-cover border border-slate-100 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 text-3xl border border-slate-200 shrink-0 select-none">
+                        📦
+                      </div>
+                    )}
                     <div className="flex-1 space-y-1">
                       <h4 className="font-black text-slate-800 text-base">
                         {selectedProduct.name}
@@ -560,7 +578,7 @@ export default function ProductsPage() {
                               key={v.id}
                               onClick={() => {
                                 setChosenVariantId(v.id);
-                                setCustomPrice(v.price);
+                                setCustomPrice(Math.max(v.price, v.lowestPriceToSell || 0));
                               }}
                               className={`p-3 text-right rounded-xl border text-xs font-black transition-all ${
                                 chosenVariantId === v.id
@@ -586,14 +604,16 @@ export default function ProductsPage() {
                         {locale === 'ar' ? 'حدد سعر البيع لعميلك (ج.م):' : 'Set selling price (EGP):'}
                       </span>
                       <span className="text-xs text-slate-400 font-bold">
-                        {locale === 'ar' ? `الحد الأدنى: ${selectedProduct.variants.find(v => v.id === chosenVariantId)?.price || selectedProduct.price} ج.م` : `Min: ${selectedProduct.variants.find(v => v.id === chosenVariantId)?.price || selectedProduct.price}`}
+                        {locale === 'ar' 
+                          ? `الحد الأدنى: ${Math.max(selectedProduct.variants.find(v => v.id === chosenVariantId)?.price || selectedProduct.price, selectedProduct.variants.find(v => v.id === chosenVariantId)?.lowestPriceToSell || 0)} ج.م` 
+                          : `Min: ${Math.max(selectedProduct.variants.find(v => v.id === chosenVariantId)?.price || selectedProduct.price, selectedProduct.variants.find(v => v.id === chosenVariantId)?.lowestPriceToSell || 0)} EGP`}
                       </span>
                     </div>
 
                     <div className="flex gap-3">
                       <input
                         type="number"
-                        min={selectedProduct.variants.find(v => v.id === chosenVariantId)?.price || selectedProduct.price}
+                        min={Math.max(selectedProduct.variants.find(v => v.id === chosenVariantId)?.price || selectedProduct.price, selectedProduct.variants.find(v => v.id === chosenVariantId)?.lowestPriceToSell || 0)}
                         value={customPrice}
                         onChange={(e) => {
                           const priceVal = parseFloat(e.target.value) || 0;
@@ -602,6 +622,14 @@ export default function ProductsPage() {
                         className="w-full text-right p-3 rounded-xl border border-emerald-200 bg-white font-black text-lg focus:outline-none focus:border-emerald-500"
                       />
                     </div>
+
+                    {selectedProduct.variants.find(v => v.id === chosenVariantId) && selectedProduct.variants.find(v => v.id === chosenVariantId)!.lowestPriceToSell > (selectedProduct.variants.find(v => v.id === chosenVariantId)?.price || selectedProduct.price) && (
+                      <p className="text-[10px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg p-1.5 font-bold">
+                        ⚠️ {locale === 'ar' 
+                          ? `سعر البيع لا يمكن أن يقل عن الحد الأدنى المحدد من المسؤول (${selectedProduct.variants.find(v => v.id === chosenVariantId)!.lowestPriceToSell} ج.م)` 
+                          : `Selling price cannot be lower than the owner's minimum retail price (${selectedProduct.variants.find(v => v.id === chosenVariantId)!.lowestPriceToSell} EGP)`}
+                      </p>
+                    )}
 
                     <div className="flex items-center justify-between text-xs font-black pt-2 border-t border-emerald-100 text-emerald-800">
                       <span>{locale === 'ar' ? 'ربحك الصافي من كل قطعة:' : 'Your profit per unit:'}</span>
@@ -631,7 +659,7 @@ export default function ProductsPage() {
 
                     <button
                       onClick={handleAddToCart}
-                      disabled={isAddingToCart || customPrice < (selectedProduct.variants.find(v => v.id === chosenVariantId)?.price || selectedProduct.price)}
+                      disabled={isAddingToCart || customPrice < Math.max(selectedProduct.variants.find(v => v.id === chosenVariantId)?.price || selectedProduct.price, selectedProduct.variants.find(v => v.id === chosenVariantId)?.lowestPriceToSell || 0)}
                       className="flex-1 h-12 rounded-xl bg-primary hover:bg-primary/95 text-white font-extrabold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed"
                     >
                       {isAddingToCart ? (

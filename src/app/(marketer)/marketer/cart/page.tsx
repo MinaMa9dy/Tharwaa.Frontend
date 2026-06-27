@@ -30,6 +30,7 @@ export default function CartPage() {
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [notes, setNotes] = useState('');
+  const [marketerNotes, setMarketerNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<string | null>(null);
   const [governorates, setGovernorates] = useState<{ id: number; name: string; nameAr: string }[]>([]);
@@ -66,6 +67,14 @@ export default function CartPage() {
         price: item.productPrice,
       }));
 
+      let combinedNotes = notes;
+      if (marketerNotes.trim()) {
+        const marketerPrefix = locale === 'ar' ? 'مصدر المسوق: ' : 'Marketer Source: ';
+        combinedNotes = combinedNotes
+          ? `${combinedNotes}\n\n[${marketerPrefix}${marketerNotes.trim()}]`
+          : `[${marketerPrefix}${marketerNotes.trim()}]`;
+      }
+
       const res = await orderService.create({
         customerName,
         customerPhone,
@@ -77,7 +86,7 @@ export default function CartPage() {
           country: locale === 'ar' ? 'مصر' : 'Egypt',
         },
         items: itemsPayload,
-        notes: notes || undefined,
+        notes: combinedNotes || undefined,
       });
 
       if (res.success) {
@@ -85,6 +94,7 @@ export default function CartPage() {
         setOrderSuccess(locale === 'ar' ? `تم إنشاء الطلب بنجاح برقم: #${res.data?.id}` : `Order created successfully: #${res.data?.id}`);
         clearCart();
         setNotes('');
+        setMarketerNotes('');
       } else {
         toast.error(res.message || (locale === 'ar' ? 'فشل إتمام الطلب' : 'Failed to submit order'));
       }
@@ -337,6 +347,19 @@ export default function CartPage() {
                   value={street}
                   onChange={(e) => setStreet(e.target.value)}
                   placeholder={locale === 'ar' ? 'مثال: شارع الثورة، عمارة 5، شقة 2' : 'Street name, building, floor'}
+                  className="w-full text-right p-3 rounded-xl border border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/5 focus:outline-none text-xs font-bold transition-all"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-black text-slate-600">
+                  {locale === 'ar' ? 'صفحة / متجر المسوق (اختياري):' : 'Marketer Page / Store (Optional):'}
+                </label>
+                <input
+                  type="text"
+                  value={marketerNotes}
+                  onChange={(e) => setMarketerNotes(e.target.value)}
+                  placeholder={locale === 'ar' ? 'مثال: صفحة فيسبوك أو اسم متجرك لمساعدة المشرف أثناء تأكيد الطلب' : 'e.g. Facebook page name or link to help supervisors confirm orders'}
                   className="w-full text-right p-3 rounded-xl border border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/5 focus:outline-none text-xs font-bold transition-all"
                 />
               </div>

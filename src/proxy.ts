@@ -4,7 +4,7 @@ import { get } from '@vercel/edge-config';
 import { ROUTE_ACCESS } from '@/shared/config/routeAccess';
 import { decodeJwt } from '@/shared/utils/jwt';
 
-export default async function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // ─── Maintenance Mode ────────────────────────────────────────────────────────

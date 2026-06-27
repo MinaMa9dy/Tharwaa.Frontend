@@ -19,7 +19,7 @@ export default function ProductDetailsPage() {
   const { addItem } = useCartStore();
 
   const getImageUrl = (url?: string) => {
-    if (!url) return 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=600&q=80';
+    if (!url) return '';
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
     const apiBase = env.apiUrl.replace(/\/api$/, '');
     const cleanUrl = url.startsWith('/') ? url.slice(1) : url;
@@ -53,7 +53,7 @@ export default function ProductDetailsPage() {
           setProduct(prod);
           
           // Set initial main image
-          const mainImg = prod.files.find((f) => f.isMain)?.url || prod.files[0]?.url || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=600&q=80';
+          const mainImg = prod.files.find((f) => f.isMain)?.url || prod.files[0]?.url || '';
           setActivePhotoUrl(mainImg);
 
           // Select first variant by default if any exist
@@ -345,12 +345,18 @@ export default function ProductDetailsPage() {
         
         {/* Gallery column */}
         <div className="space-y-4">
-          <div className="aspect-square w-full rounded-2xl bg-slate-50 border border-slate-100 overflow-hidden relative shadow-inner">
-            <img
-              src={getImageUrl(activePhotoUrl)}
-              alt={product.name}
-              className="w-full h-full object-cover"
-            />
+          <div className="aspect-square w-full rounded-2xl bg-slate-50 border border-slate-100 overflow-hidden relative shadow-inner flex items-center justify-center">
+            {activePhotoUrl ? (
+              <img
+                src={getImageUrl(activePhotoUrl)}
+                alt={product.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="text-slate-400 text-6xl select-none">
+                📦
+              </div>
+            )}
           </div>
           {/* Thumbnails */}
           {product.files && product.files.length > 1 && (
@@ -536,7 +542,7 @@ export default function ProductDetailsPage() {
           ) : (
             <div className="flex overflow-x-auto pb-4 gap-4 scrollbar-none snap-x snap-mandatory lg:grid lg:grid-cols-4 lg:gap-6 lg:overflow-visible lg:pb-0">
               {relatedProducts.map((prod) => {
-                const mainImg = prod.files.find((f) => f.isMain)?.url || prod.files[0]?.url || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=600&q=80';
+                const mainImg = prod.files.find((f) => f.isMain)?.url || prod.files[0]?.url || '';
                 return (
                   <Link
                     key={prod.id}
@@ -544,11 +550,17 @@ export default function ProductDetailsPage() {
                     className="w-[70%] sm:w-[45%] lg:w-auto shrink-0 snap-start group bg-white rounded-2xl border border-slate-200 hover:border-primary/30 overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-300 text-right"
                   >
                     <div className="relative aspect-square w-full bg-slate-50 overflow-hidden">
-                      <img
-                        src={getImageUrl(mainImg)}
-                        alt={prod.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
+                      {mainImg && getImageUrl(mainImg) ? (
+                        <img
+                          src={getImageUrl(mainImg)}
+                          alt={prod.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-400 text-4xl select-none">
+                          📦
+                        </div>
+                      )}
                     </div>
 
                     <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between space-y-2">

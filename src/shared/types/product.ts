@@ -40,6 +40,7 @@ export interface ProductVariantDto {
   productId: string;
   sku: string;
   price: number;
+  lowestPriceToSell: number;
   stockQuantity: number;
   /** Alias for stockQuantity – normalized for frontend */
   quantity: number;
@@ -74,6 +75,7 @@ export interface AdminProductVariantDto {
   sku: string;
   price: number;
   purchasePrice: number;
+  lowestPriceToSell: number;
   stockQuantity: number;
   /** Alias for stockQuantity – normalized for frontend */
   quantity: number;
@@ -123,6 +125,7 @@ export interface CreateProductVariantDto {
   sku: string;
   price: number;
   purchasePrice: number;
+  lowestPriceToSell: number;
   stockQuantity: number;
   variantAttributes: CreateVariantAttributeDto[];
 }

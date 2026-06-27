@@ -36,6 +36,7 @@ export default function LandingPage() {
               </span>
             </Link>
             <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
+              <Link href="/products" className="hover:text-primary transition-colors font-bold">{locale === 'ar' ? 'تصفح المنتجات' : 'Browse Products'}</Link>
               <a href="#how-it-works" className="hover:text-primary transition-colors">{t('howItWorks')}</a>
               <a href="#why-us" className="hover:text-primary transition-colors">{t('whyUs')}</a>
               <a href="#about-us" className="hover:text-primary transition-colors">{t('aboutUs')}</a>
@@ -112,6 +113,7 @@ export default function LandingPage() {
               </button>
             </div>
             <nav className="flex flex-col gap-5 text-base font-bold text-slate-700">
+              <Link href="/products" onClick={() => setIsMenuOpen(false)} className="hover:text-primary transition-colors pb-2 border-b border-slate-50 text-primary">{locale === 'ar' ? 'تصفح المنتجات' : 'Browse Products'}</Link>
               <a href="#how-it-works" onClick={() => setIsMenuOpen(false)} className="hover:text-primary transition-colors pb-2 border-b border-slate-50">{t('howItWorks')}</a>
               <a href="#why-us" onClick={() => setIsMenuOpen(false)} className="hover:text-primary transition-colors pb-2 border-b border-slate-50">{t('whyUs')}</a>
               <a href="#about-us" onClick={() => setIsMenuOpen(false)} className="hover:text-primary transition-colors pb-2 border-b border-slate-50">{t('aboutUs')}</a>
@@ -172,6 +174,12 @@ export default function LandingPage() {
                   className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-white font-bold text-lg px-8 py-4 rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/30 hover:-translate-y-0.5 transition-all text-center"
                 >
                   {t('startNow')}
+                </Link>
+                <Link
+                  href="/products"
+                  className="w-full sm:w-auto border-2 border-primary/30 hover:border-primary text-primary hover:text-primary font-bold text-lg px-8 py-4 rounded-2xl transition-all text-center bg-primary/5 hover:bg-primary/10"
+                >
+                  {locale === 'ar' ? '🛍️ تصفح المنتجات' : '🛍️ Browse Products'}
                 </Link>
                 <a
                   href="#how-it-works"

@@ -126,6 +126,7 @@ export default function AdminProductsPage() {
   const [varSku, setVarSku] = useState('');
   const [varPrice, setVarPrice] = useState<number>(0);
   const [varPurchasePrice, setVarPurchasePrice] = useState<number>(0);
+  const [varLowestPriceToSell, setVarLowestPriceToSell] = useState<number>(0);
   const [varStock, setVarStock] = useState<number>(0);
   const [varAttributes, setVarAttributes] = useState<{ attributeId: string; value: string }[]>([]);
   const [editingVariantSku, setEditingVariantSku] = useState<string | null>(null);
@@ -222,6 +223,7 @@ export default function AdminProductsPage() {
         sku: v.sku,
         price: v.price,
         purchasePrice: v.purchasePrice || 0,
+        lowestPriceToSell: v.lowestPriceToSell || 0,
         stockQuantity: v.quantity,
         variantAttributes: resolvedAttrs
       };
@@ -235,6 +237,7 @@ export default function AdminProductsPage() {
     setVarSku('');
     setVarPrice(0);
     setVarPurchasePrice(0);
+    setVarLowestPriceToSell(0);
     setVarStock(0);
     setVarAttributes([]);
     setEditingVariantSku(null);
@@ -334,13 +337,19 @@ export default function AdminProductsPage() {
     setVarSku(v.sku);
     setVarPrice(v.price);
     setVarPurchasePrice(v.purchasePrice || 0);
+    setVarLowestPriceToSell(v.lowestPriceToSell || 0);
     setVarStock(v.stockQuantity);
     setVarAttributes(v.variantAttributes || []);
   };
 
   const handleAddVariant = () => {
-    if (!varSku || varPrice <= 0 || varPurchasePrice < 0 || varStock < 0) {
+    if (!varSku || varPrice <= 0 || varPurchasePrice < 0 || varLowestPriceToSell < 0 || varStock < 0) {
       toast.error(locale === 'ar' ? 'الرجاء تعبئة بيانات البديل بشكل صحيح' : 'Please fill variant info correctly');
+      return;
+    }
+
+    if (varLowestPriceToSell > 0 && varLowestPriceToSell < varPrice) {
+      toast.error(locale === 'ar' ? 'أقل سعر للبيع لا يمكن أن يقل عن سعر الجملة' : 'Lowest retail price cannot be lower than wholesale price');
       return;
     }
 
@@ -357,6 +366,7 @@ export default function AdminProductsPage() {
             sku: varSku,
             price: varPrice,
             purchasePrice: varPurchasePrice,
+            lowestPriceToSell: varLowestPriceToSell,
             stockQuantity: varStock,
             variantAttributes: varAttributes.filter(a => a.attributeId && a.value)
           };
@@ -377,6 +387,7 @@ export default function AdminProductsPage() {
         sku: varSku,
         price: varPrice,
         purchasePrice: varPurchasePrice,
+        lowestPriceToSell: varLowestPriceToSell,
         stockQuantity: varStock,
         variantAttributes: varAttributes.filter(a => a.attributeId && a.value)
       };
@@ -575,6 +586,7 @@ export default function AdminProductsPage() {
                   <th className="p-4 text-right">{locale === 'ar' ? 'القسم' : 'Category'}</th>
                   <th className="p-4 text-right">{locale === 'ar' ? 'البدائل المتوفرة' : 'Variants'}</th>
                   <th className="p-4 text-right">{locale === 'ar' ? 'سعر الجملة' : 'Wholesale Price'}</th>
+                  <th className="p-4 text-right">{locale === 'ar' ? 'نطاق أقل سعر للبيع' : 'Lowest Retail Price Range'}</th>
                   <th className="p-4 text-right">{locale === 'ar' ? 'إجمالي المخزون' : 'Total Stock'}</th>
                   <th className="p-4 text-right">{locale === 'ar' ? 'الحالة' : 'Status'}</th>
                   <th className="p-4 text-center">{locale === 'ar' ? 'الإجراءات' : 'Actions'}</th>
@@ -585,11 +597,17 @@ export default function AdminProductsPage() {
                   <tr key={prod.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-3 justify-start text-right">
-                        <img
-                          src={getImageUrl(prod.files.find(f => f.isMain)?.url || prod.files[0]?.url)}
-                          alt={prod.name}
-                          className="w-10 h-10 rounded-lg object-cover border border-slate-100 shrink-0 bg-slate-50"
-                        />
+                        {prod.files && (prod.files.find(f => f.isMain)?.url || prod.files[0]?.url) ? (
+                          <img
+                            src={getImageUrl(prod.files.find(f => f.isMain)?.url || prod.files[0]?.url)}
+                            alt={prod.name}
+                            className="w-10 h-10 rounded-lg object-cover border border-slate-100 shrink-0 bg-slate-50"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 text-lg border border-slate-200 shrink-0 select-none">
+                            📦
+                          </div>
+                        )}
                         <div>
                           <p className="text-slate-900 font-black">{prod.name}</p>
                         </div>
@@ -602,6 +620,18 @@ export default function AdminProductsPage() {
                       </span>
                     </td>
                     <td className="p-4 text-slate-800 font-black">{prod.price} ج.م</td>
+                    <td className="p-4 text-slate-800 font-black">
+                      {(() => {
+                        const lowestPrices = prod.variants.map(v => v.lowestPriceToSell || 0).filter(p => p > 0);
+                        const minLowestPrice = lowestPrices.length > 0 ? Math.min(...lowestPrices) : 0;
+                        const maxLowestPrice = lowestPrices.length > 0 ? Math.max(...lowestPrices) : 0;
+                        return minLowestPrice === 0 
+                          ? (locale === 'ar' ? 'غير محدد' : 'Not set')
+                          : minLowestPrice === maxLowestPrice
+                            ? `${minLowestPrice} ج.م`
+                            : `${minLowestPrice} - ${maxLowestPrice} ج.م`;
+                      })()}
+                    </td>
                     <td className="p-4">{prod.stockQuantity} قطعة</td>
                     <td className="p-4">
                       <button
@@ -898,7 +928,7 @@ export default function AdminProductsPage() {
                     <SparklesIcon className="w-3.5 h-3.5 text-primary" />
                   </span>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                     <div className="space-y-1">
                       <label className="text-[10px] font-black text-slate-500">رمز المخزون (SKU):</label>
                       <input
@@ -926,6 +956,16 @@ export default function AdminProductsPage() {
                         min={0}
                         value={varPurchasePrice}
                         onChange={(e) => setVarPurchasePrice(parseFloat(e.target.value) || 0)}
+                        className="w-full text-right p-2.5 rounded-lg border border-slate-200 focus:outline-none text-[11px] font-bold bg-white"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-500">{locale === 'ar' ? 'أقل سعر للبيع (ج.م):' : 'Lowest Selling Price (EGP):'}</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={varLowestPriceToSell}
+                        onChange={(e) => setVarLowestPriceToSell(parseFloat(e.target.value) || 0)}
                         className="w-full text-right p-2.5 rounded-lg border border-slate-200 focus:outline-none text-[11px] font-bold bg-white"
                       />
                     </div>
@@ -1071,6 +1111,9 @@ export default function AdminProductsPage() {
                               </span>
                               <span>
                                 {locale === 'ar' ? 'سعر الشراء:' : 'Purchase Price:'} <span className="text-blue-750 font-black">{v.purchasePrice || 0} ج.م</span>
+                              </span>
+                              <span>
+                                {locale === 'ar' ? 'أقل سعر للبيع:' : 'Lowest Retail Price:'} <span className="text-amber-700 font-black">{v.lowestPriceToSell || 0} ج.م</span>
                               </span>
                               <span>
                                 {locale === 'ar' ? 'المخزون:' : 'Stock:'} <span className="text-slate-800 font-black">{v.stockQuantity}</span>

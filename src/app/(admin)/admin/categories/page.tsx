@@ -5,7 +5,7 @@ import { useLocale } from '@/shared/context/LocaleContext';
 import { categoryService } from '@/features/categories/api/categoryService';
 import { CategoryDto } from '@/shared/types/category';
 import { toast } from 'react-hot-toast';
-import { PlusIcon, TrashIcon } from '@/shared/components/Icons';
+import { PlusIcon, TrashIcon, EditIcon, SaveIcon } from '@/shared/components/Icons';
 
 
 export default function AdminCategoriesPage() {
@@ -17,6 +17,20 @@ export default function AdminCategoriesPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [editingCategory, setEditingCategory] = useState<CategoryDto | null>(null);
+
+  const handleStartEdit = (category: CategoryDto) => {
+    setEditingCategory(category);
+    setNewCatNameAr(category.name);
+    setParentCategoryId(category.parentCategoryId ?? '');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCategory(null);
+    setNewCatNameAr('');
+    setParentCategoryId('');
+  };
+
 
   const loadCategories = async () => {
     setIsLoading(true);
@@ -43,25 +57,45 @@ export default function AdminCategoriesPage() {
     if (!newCatNameAr) return;
     setIsAdding(true);
     try {
-      const res = await categoryService.create({
-        name: newCatNameAr,
-        parentCategoryId: parentCategoryId !== '' ? Number(parentCategoryId) : null
-      });
+      if (editingCategory) {
+        const res = await categoryService.update(editingCategory.id, {
+          name: newCatNameAr,
+          parentCategoryId: parentCategoryId !== '' ? Number(parentCategoryId) : null
+        });
 
-      if (res.success) {
-        toast.success(locale === 'ar' ? 'تم إضافة القسم بنجاح!' : 'Category added successfully!');
-        setNewCatNameAr('');
-        setParentCategoryId('');
-        loadCategories();
+        if (res.success) {
+          toast.success(locale === 'ar' ? 'تم تحديث القسم بنجاح!' : 'Category updated successfully!');
+          handleCancelEdit();
+          loadCategories();
+        } else {
+          toast.error(res.message || (locale === 'ar' ? 'فشل تحديث القسم' : 'Failed to update category'));
+        }
       } else {
-        toast.error(res.message || (locale === 'ar' ? 'فشل إضافة القسم' : 'Failed to add category'));
+        const res = await categoryService.create({
+          name: newCatNameAr,
+          parentCategoryId: parentCategoryId !== '' ? Number(parentCategoryId) : null
+        });
+
+        if (res.success) {
+          toast.success(locale === 'ar' ? 'تم إضافة القسم بنجاح!' : 'Category added successfully!');
+          setNewCatNameAr('');
+          setParentCategoryId('');
+          loadCategories();
+        } else {
+          toast.error(res.message || (locale === 'ar' ? 'فشل إضافة القسم' : 'Failed to add category'));
+        }
       }
     } catch (err: any) {
-      toast.error(locale === 'ar' ? `خطأ أثناء إضافة القسم: ${err.message}` : `Error adding category: ${err.message}`);
+      if (editingCategory) {
+        toast.error(locale === 'ar' ? `خطأ أثناء تحديث القسم: ${err.message}` : `Error updating category: ${err.message}`);
+      } else {
+        toast.error(locale === 'ar' ? `خطأ أثناء إضافة القسم: ${err.message}` : `Error adding category: ${err.message}`);
+      }
     } finally {
       setIsAdding(false);
     }
   };
+
 
   const handleDeleteCategory = async (id: number, name: string) => {
     const confirmMsg =
@@ -113,9 +147,15 @@ export default function AdminCategoriesPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Create Form */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 text-right space-y-4 h-fit">
+        <div className={`p-6 rounded-3xl border text-right space-y-4 h-fit transition-all duration-300 ${
+          editingCategory 
+            ? 'bg-gradient-to-br from-primary/5 to-white border-primary/30 shadow-md' 
+            : 'bg-white border-slate-200'
+        }`}>
           <h4 className="font-black text-slate-800 text-base border-b border-slate-100 pb-3">
-            {locale === 'ar' ? 'إضافة قسم جديد' : 'Add Category'}
+            {editingCategory
+              ? (locale === 'ar' ? 'تعديل القسم' : 'Edit Category')
+              : (locale === 'ar' ? 'إضافة قسم جديد' : 'Add Category')}
           </h4>
 
           <form onSubmit={handleAddCategory} className="space-y-4">
@@ -141,11 +181,13 @@ export default function AdminCategoriesPage() {
                 className="w-full text-right p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/10 text-xs font-bold bg-white"
               >
                 <option value="">{locale === 'ar' ? 'بدون قسم أب (قسم رئيسي)' : 'None (Root Category)'}</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
+                {categories
+                  .filter((c) => !editingCategory || c.id !== editingCategory.id)
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
               </select>
             </div>
 
@@ -157,15 +199,38 @@ export default function AdminCategoriesPage() {
               {isAdding ? (
                 <>
                   <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>{locale === 'ar' ? 'جاري الإضافة...' : 'Adding...'}</span>
+                  <span>
+                    {editingCategory
+                      ? (locale === 'ar' ? 'جاري الحفظ...' : 'Saving...')
+                      : (locale === 'ar' ? 'جاري الإضافة...' : 'Adding...')}
+                  </span>
                 </>
               ) : (
                 <span className="flex items-center justify-center gap-1.5">
-                  <PlusIcon className="w-4 h-4" />
-                  <span>{locale === 'ar' ? 'إضافة القسم الجديد' : 'Add Category'}</span>
+                  {editingCategory ? (
+                    <>
+                      <SaveIcon className="w-4 h-4" />
+                      <span>{locale === 'ar' ? 'حفظ التعديلات' : 'Save Changes'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <PlusIcon className="w-4 h-4" />
+                      <span>{locale === 'ar' ? 'إضافة القسم الجديد' : 'Add Category'}</span>
+                    </>
+                  )}
                 </span>
               )}
             </button>
+
+            {editingCategory && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="w-full py-3.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-extrabold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
+              >
+                <span>{locale === 'ar' ? 'إلغاء التعديل' : 'Cancel Edit'}</span>
+              </button>
+            )}
           </form>
         </div>
 
@@ -209,6 +274,14 @@ export default function AdminCategoriesPage() {
                           {cat.isActive
                             ? (locale === 'ar' ? 'نشط (تعطيل)' : 'Active (Disable)')
                             : (locale === 'ar' ? 'غير نشط (تفعيل)' : 'Inactive (Enable)')}
+                        </button>
+
+                        <button
+                          onClick={() => handleStartEdit(cat)}
+                          title={locale === 'ar' ? 'تعديل القسم' : 'Edit Category'}
+                          className="p-1.5 rounded-xl text-indigo-500 hover:bg-indigo-50 border border-transparent hover:border-indigo-200 transition-all"
+                        >
+                          <EditIcon className="w-4 h-4" />
                         </button>
 
                         <button

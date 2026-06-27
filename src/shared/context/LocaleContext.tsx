@@ -22,9 +22,13 @@ const translations: Translations = {
   wishlist: { ar: 'المفضلة', en: 'Wishlist' },
   myOrders: { ar: 'طلباتي', en: 'My Orders' },
   withdrawals: { ar: 'الطلبات المالية', en: 'Withdrawals' },
-  profile: { ar: 'الملف الشخصي', en: 'Profile' },
   arabic: { ar: 'العربية', en: 'Arabic' },
   english: { ar: 'الإنجليزية', en: 'English' },
+  reports: { ar: 'التقارير والتحليلات', en: 'Reports & Analytics' },
+  salesReport: { ar: 'تقرير المبيعات', en: 'Sales Report' },
+  marketersReport: { ar: 'تقرير المسوقين', en: 'Marketers Report' },
+  productsReport: { ar: 'تقرير المنتجات والمخزون', en: 'Products & Inventory' },
+  financialsReport: { ar: 'تقرير الأداء المالي', en: 'Financials Report' },
 
   // Landing Page
   heroTitle: { ar: 'ابدأ تجارتك الإلكترونية اليوم بدون رأس مال', en: 'Start your E-Commerce business today with zero capital' },

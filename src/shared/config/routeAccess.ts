@@ -8,6 +8,7 @@ export const ROUTE_ACCESS: Record<string, Role[]> = {
   '/forgot-password': [],
   '/reset-password': [],
   '/confirm-email': [],
+  '/products': [],
 
   // Admin-only dashboard & configurations
   '/admin/dashboard': ['Admin', 'Supervisor', 'Supplier'],
