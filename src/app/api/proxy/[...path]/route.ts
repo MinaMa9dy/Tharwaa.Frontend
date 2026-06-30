@@ -1,7 +1,21 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import axios from 'axios';
+import http from 'http';
+import https from 'https';
 import { env } from '@/shared/config/env';
+
+const httpAgent = new http.Agent({
+  keepAlive: true,
+  maxSockets: 100,
+  keepAliveMsecs: 1000,
+});
+
+const httpsAgent = new https.Agent({
+  keepAlive: true,
+  maxSockets: 100,
+  keepAliveMsecs: 1000,
+});
 
 async function handleRequest(request: Request, context: { params: Promise<{ path: string[] }> }) {
   const method = request.method;
@@ -25,6 +39,7 @@ async function handleRequest(request: Request, context: { params: Promise<{ path
     }
     
     let data: any = null;
+    const isHttps = backendUrl.startsWith('https:');
     
     if (method !== 'GET' && method !== 'HEAD') {
       const contentType = request.headers.get('content-type') || '';
@@ -39,6 +54,8 @@ async function handleRequest(request: Request, context: { params: Promise<{ path
             ...headers,
             'Content-Type': 'multipart/form-data',
           },
+          httpAgent: isHttps ? undefined : httpAgent,
+          httpsAgent: isHttps ? httpsAgent : undefined,
         });
         console.log(`\x1b[32m[BFF Proxy] Success [${apiResponse.status}]\x1b[0m ${method} ${backendUrl}`);
         if (apiResponse.status === 204) {
@@ -56,6 +73,8 @@ async function handleRequest(request: Request, context: { params: Promise<{ path
       url: backendUrl,
       data,
       headers,
+      httpAgent: isHttps ? undefined : httpAgent,
+      httpsAgent: isHttps ? httpsAgent : undefined,
     });
     
     console.log(`\x1b[32m[BFF Proxy] Success [${apiResponse.status}]\x1b[0m ${method} ${backendUrl}`);
