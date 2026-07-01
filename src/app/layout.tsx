@@ -3,6 +3,7 @@ import { Cairo, Outfit } from "next/font/google";
 import "./globals.css";
 import { LocaleProvider } from "@/shared/context/LocaleContext";
 import WhatsAppSupport from "@/shared/components/WhatsAppSupport";
+import DeveloperSignature from "@/shared/components/DeveloperSignature";
 
 import { Toaster } from 'react-hot-toast';
 import { Analytics } from '@vercel/analytics/next';
@@ -85,6 +86,7 @@ export default function RootLayout({
           />
           {children}
           <WhatsAppSupport />
+          <DeveloperSignature />
           <Analytics />
           <SpeedInsights />
         </LocaleProvider>

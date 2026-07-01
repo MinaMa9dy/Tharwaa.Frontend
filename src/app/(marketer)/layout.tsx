@@ -8,12 +8,14 @@ import { CloseIcon } from '@/shared/components/Icons';
 
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useCartStore } from '@/features/cart/store/cartStore';
+import { useWishlistStore } from '@/features/wishlist/store/wishlistStore';
 import { marketerService } from '@/features/marketers/api/marketerService';
 
 export default function MarketerLayout({ children }: { children: React.ReactNode }) {
   const { t, dir, locale, setLocale } = useLocale();
   const { user, logout, initialize } = useAuthStore();
   const { cart, fetchCart } = useCartStore();
+  const { fetchWishlist } = useWishlistStore();
   const pathname = usePathname();
   const [balance, setBalance] = useState<number | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -42,6 +44,8 @@ export default function MarketerLayout({ children }: { children: React.ReactNode
     if (user?.id) {
       // Fetch cart items count
       fetchCart();
+      // Fetch wishlist
+      fetchWishlist();
       // Fetch marketer balance
       marketerService.getBalance(user.id).then((res) => {
         if (res.success && res.data) {
@@ -49,12 +53,13 @@ export default function MarketerLayout({ children }: { children: React.ReactNode
         }
       });
     }
-  }, [user, fetchCart]);
+  }, [user, fetchCart, fetchWishlist]);
 
   const cartItemsCount = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
   const menuItems = [
     { name: 'المنتجات', enName: 'Products', path: '/marketer/products' },
+    { name: 'المفضلة', enName: 'Wishlist', path: '/marketer/wishlist' },
     { name: 'طلباتي', enName: 'My Orders', path: '/marketer/orders' },
     { name: 'الأرباح والسحوبات', enName: 'Withdrawals', path: '/marketer/withdrawals' },
     { name: 'الإحصائيات', enName: 'Dashboard', path: '/marketer/dashboard' },

@@ -9,9 +9,10 @@ import { categoryService } from '@/features/categories/api/categoryService';
 import { ProductDto, ProductParams } from '@/shared/types/product';
 import { CategoryDto } from '@/shared/types/category';
 import { useAuthStore } from '@/features/auth/store/authStore';
+import { useWishlistStore } from '@/features/wishlist/store/wishlistStore';
 import Pagination from '@/shared/components/Pagination';
 import { toast } from 'react-hot-toast';
-import { SearchIcon, CartIcon, CloseIcon, SparklesIcon } from '@/shared/components/Icons';
+import { SearchIcon, CartIcon, CloseIcon, SparklesIcon, HeartIcon } from '@/shared/components/Icons';
 import { bannerService } from '@/features/banners/api/bannerService';
 import { BannerDto } from '@/shared/types/banner';
 import { env } from '@/shared/config/env';
@@ -21,6 +22,7 @@ const ALL_CATEGORY: CategoryDto = { id: 0, name: 'الكل', nameEn: 'All', isAc
 export default function PublicProductsPage() {
   const { locale, dir } = useLocale();
   const { user } = useAuthStore();
+  const { wishlist, addItem: addWishItem, removeItem: removeWishItem } = useWishlistStore();
   const router = useRouter();
 
   const [products, setProducts] = useState<ProductDto[]>([]);
@@ -354,38 +356,88 @@ export default function PublicProductsPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {products.map((prod) => {
             const mainImg = prod.files.find((f) => f.isMain)?.url || prod.files[0]?.url || '';
+            const isWishlisted = !!wishlist?.some((i) => i.productId === prod.id);
+            const wishItem = wishlist?.find((i) => i.productId === prod.id);
+
+            const handleWishlistToggle = async (e: React.MouseEvent) => {
+              e.preventDefault();
+              e.stopPropagation();
+
+              if (!user) {
+                toast(
+                  locale === 'ar'
+                    ? '🔐 يجب تسجيل الدخول لإضافة المنتجات إلى المفضلة'
+                    : '🔐 Please login to add items to wishlist',
+                  {
+                    duration: 3000,
+                    style: {
+                      background: '#1e293b',
+                      color: '#f8fafc',
+                      fontWeight: '700',
+                      borderRadius: '14px',
+                      padding: '14px 20px',
+                    },
+                  }
+                );
+                setTimeout(() => {
+                  router.push(`/login?redirect=/products`);
+                }, 1000);
+                return;
+              }
+
+              try {
+                if (wishItem) {
+                  await removeWishItem(wishItem.id);
+                  toast.success(locale === 'ar' ? 'تمت الإزالة من المفضلة' : 'Removed from wishlist');
+                } else {
+                  await addWishItem(prod.id, prod.name, prod.price, mainImg);
+                  toast.success(locale === 'ar' ? 'تمت الإضافة للمفضلة' : 'Added to wishlist');
+                }
+              } catch {
+                toast.error(locale === 'ar' ? 'فشل تعديل المفضلة' : 'Failed to update wishlist');
+              }
+            };
+
             return (
               <div
                 key={prod.id}
-                className="group bg-white rounded-2xl sm:rounded-3xl border border-slate-200 hover:border-primary/30 overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-300"
+                className="group bg-white rounded-2xl sm:rounded-3xl border border-slate-200 hover:border-primary/30 overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-300 relative"
               >
-                {/* Image */}
-                <button
-                  onClick={() => setSelectedProduct(prod)}
-                  className="block w-full text-left"
-                >
-                  <div className="relative aspect-square w-full bg-slate-50 overflow-hidden">
-                    {mainImg ? (
-                      <img
-                        src={getImageUrl(mainImg)}
-                        alt={prod.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-300 text-4xl">📦</div>
-                    )}
-                  </div>
-                </button>
+                {/* Image & Wishlist Button */}
+                <div className="relative block">
+                  <Link href={`/products/${prod.id}`} className="block w-full">
+                    <div className="relative aspect-square w-full bg-slate-50 overflow-hidden">
+                      {mainImg ? (
+                        <img
+                          src={getImageUrl(mainImg)}
+                          alt={prod.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-300 text-4xl">📦</div>
+                      )}
+                    </div>
+                  </Link>
+                  <button
+                    onClick={handleWishlistToggle}
+                    className="absolute top-3 right-3 z-10 w-8.5 h-8.5 bg-white/95 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95"
+                    title={isWishlisted ? (locale === 'ar' ? 'إزالة من المفضلة' : 'Remove from Wishlist') : (locale === 'ar' ? 'إضافة إلى المفضلة' : 'Add to Wishlist')}
+                  >
+                    <HeartIcon className={isWishlisted ? 'text-red-500 w-4.5 h-4.5' : 'text-slate-400 w-4.5 h-4.5'} fill={isWishlisted ? '#ef4444' : 'none'} />
+                  </button>
+                </div>
 
                 {/* Info */}
                 <div className="p-3 sm:p-5 flex-1 flex flex-col justify-between space-y-3 sm:space-y-4 text-right">
                   <div className="space-y-1">
-                    <span className="text-[9px] sm:text-[10px] font-black text-primary/80 uppercase">
-                      {prod.categoryName || (locale === 'ar' ? 'تصنيف عام' : 'General')}
-                    </span>
-                    <h3 className="text-xs sm:text-base font-black text-slate-800 line-clamp-1 group-hover:text-primary transition-colors">
-                      {prod.name}
-                    </h3>
+                    <Link href={`/products/${prod.id}`} className="block group">
+                      <span className="text-[9px] sm:text-[10px] font-black text-primary/80 uppercase">
+                        {prod.categoryName || (locale === 'ar' ? 'تصنيف عام' : 'General')}
+                      </span>
+                      <h3 className="text-xs sm:text-base font-black text-slate-800 line-clamp-1 group-hover:text-primary transition-colors">
+                        {prod.name}
+                      </h3>
+                    </Link>
                     <p className="text-[10px] sm:text-xs text-slate-400 font-bold line-clamp-2 leading-relaxed">
                       {prod.description}
                     </p>
@@ -404,9 +456,9 @@ export default function PublicProductsPage() {
                     </div>
 
                     {mounted && user ? (
-                      // Logged-in: redirect to marketer products for full cart experience
+                      // Logged-in: redirect to product details for full cart experience
                       <Link
-                        href="/marketer/products"
+                        href={`/products/${prod.id}`}
                         className="w-full py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-primary hover:bg-primary/95 text-white font-extrabold text-[10px] sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1 sm:gap-2"
                       >
                         <CartIcon className="w-4 h-4" />
