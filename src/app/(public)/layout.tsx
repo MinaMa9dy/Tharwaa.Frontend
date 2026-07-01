@@ -23,7 +23,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
           {/* Brand */}
           <div className="flex items-center gap-3 sm:gap-8">
-            <Link href="/" className="flex items-center gap-2 group">
+            <Link href={mounted && user ? (user.role === 'Admin' ? '/admin/dashboard' : '/products') : '/'} className="flex items-center gap-2 group">
               <span className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-primary flex items-center justify-center text-white font-extrabold text-lg sm:text-xl shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform shrink-0">
                 ث
               </span>

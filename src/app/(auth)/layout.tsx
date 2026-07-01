@@ -3,16 +3,23 @@
 import React from 'react';
 import Link from 'next/link';
 import { useLocale } from '@/shared/context/LocaleContext';
+import { useAuthStore } from '@/features/auth/store/authStore';
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const { t, dir, locale, setLocale } = useLocale();
+  const { user } = useAuthStore();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans" dir={dir}>
       {/* Top Navbar */}
       <header className="w-full border-b border-slate-100 bg-white/70 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
+          <Link href={mounted && user ? (user.role === 'Admin' ? '/admin/dashboard' : '/products') : '/'} className="flex items-center gap-2 group">
             <span className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-extrabold text-sm shadow-md group-hover:scale-105 transition-transform">
               ث
             </span>

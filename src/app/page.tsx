@@ -4,13 +4,17 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLocale } from '@/shared/context/LocaleContext';
 import { CloseIcon, SparklesIcon } from '@/shared/components/Icons';
+import { useAuthStore } from '@/features/auth/store/authStore';
 
 
 export default function LandingPage() {
   const { t, locale, setLocale, dir } = useLocale();
+  const { user } = useAuthStore();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     if (isMenuOpen) {
       document.body.style.overflow = 'hidden';
     } else {
@@ -27,7 +31,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
           <div className="flex items-center gap-3 sm:gap-8">
-            <Link href="/" className="flex items-center gap-2 group">
+            <Link href={mounted && user ? (user.role === 'Admin' ? '/admin/dashboard' : '/products') : '/'} className="flex items-center gap-2 group">
               <span className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-primary flex items-center justify-center text-white font-extrabold text-lg sm:text-xl shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform shrink-0">
                 ث
               </span>
