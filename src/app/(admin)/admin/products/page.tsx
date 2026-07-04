@@ -161,7 +161,7 @@ export default function AdminProductsPage() {
       }
 
       if (cRes.success && cRes.data) {
-        setCategories(cRes.data.filter(c => c.isActive));
+        setCategories(cRes.data);
       }
 
       if (aRes.success && aRes.data) {
@@ -169,7 +169,7 @@ export default function AdminProductsPage() {
       }
 
       if (!isSupplier && sRes.success && sRes.data) {
-        setSuppliers(sRes.data.filter(s => s.isActive));
+        setSuppliers(sRes.data);
       }
     } catch (err) {
       toast.error(locale === 'ar' ? 'فشل تحميل البيانات الأساسية' : 'Failed to load essential data');
@@ -550,7 +550,7 @@ export default function AdminProductsPage() {
               <option value="">{locale === 'ar' ? 'كل الأقسام' : 'All Categories'}</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {locale === 'ar' ? c.name : c.nameEn || c.name}
+                  {locale === 'ar' ? c.name : c.nameEn || c.name}{!c.isActive ? ` (${locale === 'ar' ? 'معطل' : 'Inactive'})` : ''}
                 </option>
               ))}
             </select>
@@ -752,7 +752,7 @@ export default function AdminProductsPage() {
                     <option value="">{locale === 'ar' ? 'اختر القسم...' : 'Select Category...'}</option>
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.name}
+                        {c.name}{!c.isActive ? ` (${locale === 'ar' ? 'معطل' : 'Inactive'})` : ''}
                       </option>
                     ))}
                   </select>
@@ -769,7 +769,7 @@ export default function AdminProductsPage() {
                     <option value="">{locale === 'ar' ? 'اختر المورد...' : 'Select Supplier...'}</option>
                     {suppliers.map((s) => (
                       <option key={s.id} value={s.id}>
-                        {s.firstName} {s.lastName}
+                        {s.firstName} {s.lastName}{!s.isActive ? ` (${locale === 'ar' ? 'معطل' : 'Inactive'})` : ''}
                       </option>
                     ))}
                   </select>
