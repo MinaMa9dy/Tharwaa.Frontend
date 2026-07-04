@@ -55,6 +55,8 @@ export interface ProductDto {
   description?: string;
   categoryId: number;
   categoryName?: string;
+  supplierId: string;
+  supplierName?: string;
   productPhotos: ProductPhotoDto[];
   productVariants: ProductVariantDto[];
   /** Normalized for display */
@@ -94,6 +96,7 @@ export interface AdminProductDto {
   categoryId: number;
   categoryName?: string;
   supplierId: string;
+  supplierName?: string;
   isDeleted: boolean;
   /** Computed: !isDeleted */
   isActive: boolean;

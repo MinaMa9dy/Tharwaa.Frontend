@@ -3,10 +3,11 @@
 import React, { useEffect, useState } from 'react';
 import { useLocale } from '@/shared/context/LocaleContext';
 import { supervisorService } from '@/features/supervisors/api/supervisorService';
-import { SupervisorDto } from '@/shared/types/supervisor';
+import { SupervisorDto, UpdateSupervisorDto } from '@/shared/types/supervisor';
 import { toast } from 'react-hot-toast';
 import Pagination from '@/shared/components/Pagination';
 import { PlusIcon, SearchIcon, EditIcon, TrashIcon, CloseIcon, SaveIcon } from '@/shared/components/Icons';
+import { getErrorMessage } from '@/shared/utils/error';
 
 
 export default function AdminSupervisorsPage() {
@@ -104,6 +105,7 @@ export default function AdminSupervisorsPage() {
     setFirstName(sup.firstName);
     setLastName(sup.lastName);
     setPhoneNumber(sup.phoneNumber || '');
+    setPassword('');
     setIsEditOpen(true);
   };
 
@@ -132,7 +134,7 @@ export default function AdminSupervisorsPage() {
         toast.error(res.message || (locale === 'ar' ? 'فشل إضافة المشرف' : 'Failed to add supervisor'));
       }
     } catch (err: any) {
-      const errMsg = err.response?.data?.message || err.message || (locale === 'ar' ? 'فشل إضافة المشرف' : 'Failed to add supervisor');
+      const errMsg = getErrorMessage(err, locale === 'ar' ? 'فشل إضافة المشرف' : 'Failed to add supervisor');
       toast.error(locale === 'ar' ? `خطأ: ${errMsg}` : `Error: ${errMsg}`);
     } finally {
       setIsSubmitting(false);
@@ -148,11 +150,15 @@ export default function AdminSupervisorsPage() {
 
     setIsSubmitting(true);
     try {
-      const res = await supervisorService.update(editingSupervisor.id, {
+      const updateData: UpdateSupervisorDto = {
         firstName,
         lastName,
         phoneNumber
-      });
+      };
+      if (password) {
+        updateData.password = password;
+      }
+      const res = await supervisorService.update(editingSupervisor.id, updateData);
 
       if (res.success) {
         toast.success(locale === 'ar' ? 'تم تحديث بيانات المشرف بنجاح!' : 'Supervisor updated successfully!');
@@ -163,7 +169,7 @@ export default function AdminSupervisorsPage() {
         toast.error(res.message || (locale === 'ar' ? 'فشل تعديل المشرف' : 'Failed to update supervisor'));
       }
     } catch (err: any) {
-      const errMsg = err.response?.data?.message || err.message || (locale === 'ar' ? 'فشل تعديل المشرف' : 'Failed to update supervisor');
+      const errMsg = getErrorMessage(err, locale === 'ar' ? 'فشل تعديل المشرف' : 'Failed to update supervisor');
       toast.error(locale === 'ar' ? `خطأ: ${errMsg}` : `Error: ${errMsg}`);
     } finally {
       setIsSubmitting(false);
@@ -182,7 +188,7 @@ export default function AdminSupervisorsPage() {
         toast.error(res.message || (locale === 'ar' ? 'فشل حذف المشرف' : 'Failed to delete supervisor'));
       }
     } catch (err: any) {
-      const errMsg = err.response?.data?.message || err.message || (locale === 'ar' ? 'فشل حذف المشرف' : 'Failed to delete supervisor');
+      const errMsg = getErrorMessage(err, locale === 'ar' ? 'فشل حذف المشرف' : 'Failed to delete supervisor');
       toast.error(locale === 'ar' ? `خطأ: ${errMsg}` : `Error: ${errMsg}`);
     }
   };
@@ -195,7 +201,7 @@ export default function AdminSupervisorsPage() {
         loadSupervisors();
       }
     } catch (err: any) {
-      const errMsg = err.response?.data?.message || err.message || (locale === 'ar' ? 'فشل تحديث حالة المشرف' : 'Failed to update supervisor status');
+      const errMsg = getErrorMessage(err, locale === 'ar' ? 'فشل تحديث حالة المشرف' : 'Failed to update supervisor status');
       toast.error(locale === 'ar' ? `خطأ: ${errMsg}` : `Error: ${errMsg}`);
     }
   };
@@ -418,6 +424,21 @@ export default function AdminSupervisorsPage() {
                   className="w-full text-right p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/10 text-xs font-bold bg-white"
                 />
               </div>
+
+              {isEditOpen && (
+                <div className="space-y-1">
+                  <label className="text-xs font-black text-slate-600">
+                    {locale === 'ar' ? 'كلمة المرور (اختياري لتغييرها):' : 'Password (optional to change):'}
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full text-right p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/10 text-xs font-bold bg-white"
+                    placeholder={locale === 'ar' ? 'اتركه فارغاً للاحتفاظ بالقديمة' : 'Leave empty to keep current'}
+                  />
+                </div>
+              )}
 
               <button
                 type="submit"

@@ -501,9 +501,17 @@ export default function ProductsPage() {
                 <div className="p-3 sm:p-5 flex-1 flex flex-col justify-between space-y-3 sm:space-y-4 text-right">
                   <div className="space-y-1">
                     <Link href={`/products/${prod.id}`} className="block group">
-                      <span className="text-[9px] sm:text-[10px] font-black text-primary/80 uppercase">
-                        {prod.categoryName || (locale === 'ar' ? 'تصنيف عام' : 'General')}
-                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] sm:text-[10px] font-black text-primary/80 uppercase">
+                          {prod.categoryName || (locale === 'ar' ? 'تصنيف عام' : 'General')}
+                        </span>
+                        {prod.supplierName && (
+                          <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 flex items-center gap-0.5">
+                            <span>🏪</span>
+                            <span>{prod.supplierName}</span>
+                          </span>
+                        )}
+                      </div>
                       <h3 className="text-xs sm:text-base font-black text-slate-800 line-clamp-1 group-hover:text-primary transition-colors">
                         {prod.name}
                       </h3>
@@ -590,6 +598,11 @@ export default function ProductsPage() {
                       <p className="text-xs text-slate-400 font-bold">
                         {locale === 'ar' ? `سعر الجملة: ${selectedProduct.price} ج.م` : `Wholesale price: ${selectedProduct.price} EGP`}
                       </p>
+                      {selectedProduct.supplierName && (
+                        <p className="text-[10px] text-slate-500 font-bold flex items-center gap-1 justify-end">
+                          <span>🏪 {locale === 'ar' ? 'المورد:' : 'Supplier:'} {selectedProduct.supplierName}</span>
+                        </p>
+                      )}
                     </div>
                   </div>
 

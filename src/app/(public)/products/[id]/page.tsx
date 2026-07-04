@@ -459,9 +459,17 @@ export default function ProductDetailsPage() {
                   {locale === 'ar' ? 'نفذ المخزون' : 'Out of Stock'}
                 </span>
               )}
-              <span className="bg-primary/5 text-primary border border-primary/10 px-3 py-1 rounded-full text-[10px] sm:text-xs font-black">
-                {product.categoryName || (locale === 'ar' ? 'قسم عام' : 'General')}
-              </span>
+              <div className="flex gap-2">
+                {product.supplierName && (
+                  <span className="bg-slate-50 text-slate-500 border border-slate-200 px-3 py-1 rounded-full text-[10px] sm:text-xs font-black flex items-center gap-1">
+                    <span>🏪</span>
+                    <span>{product.supplierName}</span>
+                  </span>
+                )}
+                <span className="bg-primary/5 text-primary border border-primary/10 px-3 py-1 rounded-full text-[10px] sm:text-xs font-black">
+                  {product.categoryName || (locale === 'ar' ? 'قسم عام' : 'General')}
+                </span>
+              </div>
             </div>
 
             <h1 className="text-xl sm:text-3xl font-black text-slate-800 leading-tight">
@@ -655,9 +663,17 @@ export default function ProductDetailsPage() {
 
                     <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between space-y-2">
                       <div className="space-y-0.5">
-                        <span className="text-[8px] sm:text-[9px] font-black text-primary/80 uppercase">
-                          {prod.categoryName || (locale === 'ar' ? 'تصنيف عام' : 'General')}
-                        </span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[8px] sm:text-[9px] font-black text-primary/80 uppercase">
+                            {prod.categoryName || (locale === 'ar' ? 'تصنيف عام' : 'General')}
+                          </span>
+                          {prod.supplierName && (
+                            <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 flex items-center gap-0.5">
+                              <span>🏪</span>
+                              <span>{prod.supplierName}</span>
+                            </span>
+                          )}
+                        </div>
                         <h3 className="text-xs sm:text-sm font-black text-slate-800 line-clamp-1 group-hover:text-primary transition-colors">
                           {prod.name}
                         </h3>

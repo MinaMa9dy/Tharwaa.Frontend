@@ -9,6 +9,7 @@ import { CartItemDto } from '@/shared/types/cart';
 import { env } from '@/shared/config/env';
 import { toast } from 'react-hot-toast';
 import { TrashIcon, CartIcon } from '@/shared/components/Icons';
+import { getErrorMessage } from '@/shared/utils/error';
 
 
 export default function CartPage() {
@@ -99,7 +100,8 @@ export default function CartPage() {
         toast.error(res.message || (locale === 'ar' ? 'فشل إتمام الطلب' : 'Failed to submit order'));
       }
     } catch (err: any) {
-      toast.error(locale === 'ar' ? `خطأ أثناء إتمام الطلب: ${err.message}` : `Error: ${err.message}`);
+      const errMsg = getErrorMessage(err, locale === 'ar' ? 'فشل إتمام الطلب' : 'Failed to submit order');
+      toast.error(locale === 'ar' ? `خطأ أثناء إتمام الطلب: ${errMsg}` : `Error: ${errMsg}`);
     } finally {
       setIsSubmitting(false);
     }

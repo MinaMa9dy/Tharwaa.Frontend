@@ -33,6 +33,7 @@ export default function AdminOrdersPage() {
   const { user } = useAuthStore();
   const isSupervisor = user?.role === 'Supervisor';
   const isAdmin = user?.role === 'Admin';
+  const isSupplier = user?.role === 'Supplier';
 
   const [mounted, setMounted] = useState(false);
   const [orders, setOrders] = useState<OrderDto[]>([]);
@@ -94,6 +95,9 @@ export default function AdminOrdersPage() {
           // Orders already assigned to this supervisor
           res = await orderService.getMyOrders(statusFilter || undefined, searchQuery || undefined, currentPage, pageSize);
         }
+      } else if (isSupplier && user) {
+        // Supplier: only confirmed orders containing products of this supplier
+        res = await orderService.getAll(undefined, statusFilter || undefined, searchQuery || undefined, currentPage, pageSize, undefined, undefined, user.id);
       } else {
         // Admin: all orders with optional status + search
         res = await orderService.getAll(undefined, statusFilter || undefined, searchQuery || undefined, currentPage, pageSize);
@@ -226,6 +230,8 @@ export default function AdminOrdersPage() {
         <p className="text-slate-400 text-xs sm:text-sm font-bold mt-1">
           {isSupervisor
             ? (locale === 'ar' ? 'اختر طلبات للتأكيد أو راجع طلباتك المُعيَّنة' : 'Pick orders to confirm or review your assigned orders')
+            : isSupplier
+            ? (locale === 'ar' ? 'استعرض طلبات الشحن المؤكدة التي تحتوي على منتجاتك لتجهيزها للشحن والتسليم.' : 'View confirmed shipping orders containing your products.')
             : (locale === 'ar' ? 'راجع تفاصيل طلبات الشحن المرسلة من المسوقين، غير حالة الطلب لتأكيد الشحن والتسليم للعميل.' : 'View dropshipping orders and update logistics statuses.')}
         </p>
       </div>
@@ -298,7 +304,9 @@ export default function AdminOrdersPage() {
           ) : (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <h3 className="font-black text-slate-800 text-sm shrink-0">
-                {locale === 'ar' ? 'كل طلبات المنصة' : 'All Platform Orders'}
+                {isSupplier
+                  ? (locale === 'ar' ? 'طلباتي المؤكدة' : 'My Confirmed Orders')
+                  : (locale === 'ar' ? 'كل طلبات المنصة' : 'All Platform Orders')}
               </h3>
               <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                 {/* Status Filter Dropdown */}
@@ -375,6 +383,12 @@ export default function AdminOrdersPage() {
                       <span>{locale === 'ar' ? 'العنوان:' : 'Address:'} {order.shippingAddress?.street}، {order.shippingAddress?.city}، {order.shippingAddress?.state}</span>
                       <MapPinIcon className="w-3.5 h-3.5 text-slate-400" />
                     </p>
+                    {order.supplierName && (
+                      <p className="text-xs text-slate-500 font-bold flex items-center gap-1.5 flex-wrap justify-end">
+                        <span>{locale === 'ar' ? 'المورد:' : 'Supplier:'} {order.supplierName}</span>
+                        <span>🏪</span>
+                      </p>
+                    )}
                     {order.marketerName && (
                       <p className="text-xs text-slate-500 font-bold flex items-center gap-1.5 flex-wrap justify-end">
                         <span>{locale === 'ar' ? 'المسوق:' : 'Marketer:'} {order.marketerName}</span>
@@ -565,8 +579,8 @@ export default function AdminOrdersPage() {
                         )}
                       </div>
                     )}
-                    {/* Admin: read-only view — status changes are Supervisor-only on the backend */}
-                    {isAdmin && (
+                    {/* Non-supervisor (Admin/Supplier): read-only view */}
+                    {!isSupervisor && (
                       <span className="px-2.5 py-1 rounded-xl text-[10px] font-black border border-slate-200 bg-slate-50 text-slate-400 flex items-center gap-1">
                         <span>{locale === 'ar' ? 'عرض فقط' : 'View Only'}</span>
                         <EyeIcon className="w-3.5 h-3.5" />

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useLocale } from '@/shared/context/LocaleContext';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { productService } from '@/features/products/api/productService';
 import { categoryService } from '@/features/categories/api/categoryService';
 import { supplierService } from '@/features/suppliers/api/supplierService';
@@ -35,6 +36,8 @@ interface AttributeLookup {
 
 export default function AdminProductsPage() {
   const { locale, dir } = useLocale();
+  const { user } = useAuthStore();
+  const isSupplier = user?.role === 'Supplier';
   const [products, setProducts] = useState<AdminProductDto[]>([]);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
@@ -146,7 +149,7 @@ export default function AdminProductsPage() {
         }),
         categoryService.getAll(),
         productService.getAttributes(),
-        supplierService.getAll()
+        !isSupplier ? supplierService.getAll() : Promise.resolve({ success: true, data: [] })
       ]);
 
       if (pRes.success && pRes.data) {
@@ -165,7 +168,7 @@ export default function AdminProductsPage() {
         setAttributes(aRes.data);
       }
 
-      if (sRes.success && sRes.data) {
+      if (!isSupplier && sRes.success && sRes.data) {
         setSuppliers(sRes.data.filter(s => s.isActive));
       }
     } catch (err) {
@@ -520,13 +523,15 @@ export default function AdminProductsPage() {
             {locale === 'ar' ? 'أضف منتجات، أنشئ خيارات بديلة (الألوان، المقاسات)، حدد سعر الجملة وعدل مستويات المخزون.' : 'Track stock levels, modify variant options, pricing, and configurations.'}
           </p>
         </div>
-        <button
-          onClick={openCreateModal}
-          className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/95 text-white font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-1.5"
-        >
-          <PlusIcon className="w-4 h-4" />
-          <span>{locale === 'ar' ? 'إضافة منتج جديد' : 'Add New Product'}</span>
-        </button>
+        {!isSupplier && (
+          <button
+            onClick={openCreateModal}
+            className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/95 text-white font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-1.5"
+          >
+            <PlusIcon className="w-4 h-4" />
+            <span>{locale === 'ar' ? 'إضافة منتج جديد' : 'Add New Product'}</span>
+          </button>
+        )}
       </div>
 
       {/* Products list */}
@@ -589,7 +594,7 @@ export default function AdminProductsPage() {
                   <th className="p-4 text-right">{locale === 'ar' ? 'نطاق أقل سعر للبيع' : 'Lowest Retail Price Range'}</th>
                   <th className="p-4 text-right">{locale === 'ar' ? 'إجمالي المخزون' : 'Total Stock'}</th>
                   <th className="p-4 text-right">{locale === 'ar' ? 'الحالة' : 'Status'}</th>
-                  <th className="p-4 text-center">{locale === 'ar' ? 'الإجراءات' : 'Actions'}</th>
+                  {!isSupplier && <th className="p-4 text-center">{locale === 'ar' ? 'الإجراءات' : 'Actions'}</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -645,26 +650,28 @@ export default function AdminProductsPage() {
                         {prod.isActive ? (locale === 'ar' ? 'نشط' : 'Active') : (locale === 'ar' ? 'معطل' : 'Disabled')}
                       </button>
                     </td>
-                    <td className="p-4">
-                      <div className="flex gap-2 justify-center items-center">
-                        <button
-                          onClick={() => openEditModal(prod)}
-                          className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors text-xs font-black border border-amber-200 flex items-center gap-1"
-                          title={locale === 'ar' ? 'تعديل' : 'Edit'}
-                        >
-                          <EditIcon className="w-3.5 h-3.5" />
-                          <span>{locale === 'ar' ? 'تعديل' : 'Edit'}</span>
-                        </button>
-                        <button
-                          onClick={() => handleDeleteProduct(prod.id)}
-                          className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors text-xs font-black border border-rose-200 flex items-center gap-1"
-                          title={locale === 'ar' ? 'حذف' : 'Delete'}
-                        >
-                          <TrashIcon className="w-3.5 h-3.5" />
-                          <span>{locale === 'ar' ? 'حذف' : 'Delete'}</span>
-                        </button>
-                      </div>
-                    </td>
+                    {!isSupplier && (
+                      <td className="p-4">
+                        <div className="flex gap-2 justify-center items-center">
+                          <button
+                            onClick={() => openEditModal(prod)}
+                            className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors text-xs font-black border border-amber-200 flex items-center gap-1"
+                            title={locale === 'ar' ? 'تعديل' : 'Edit'}
+                          >
+                            <EditIcon className="w-3.5 h-3.5" />
+                            <span>{locale === 'ar' ? 'تعديل' : 'Edit'}</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProduct(prod.id)}
+                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors text-xs font-black border border-rose-200 flex items-center gap-1"
+                            title={locale === 'ar' ? 'حذف' : 'Delete'}
+                          >
+                            <TrashIcon className="w-3.5 h-3.5" />
+                            <span>{locale === 'ar' ? 'حذف' : 'Delete'}</span>
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

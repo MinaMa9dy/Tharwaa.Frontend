@@ -39,12 +39,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'التقارير والتحليلات', enName: 'Reports & Analytics', path: '/admin/reports', roles: ['Admin'] },
     { name: 'إدارة المشرفين', enName: 'Supervisors', path: '/admin/supervisors', roles: ['Admin'] },
     { name: 'إدارة الموردين', enName: 'Suppliers', path: '/admin/suppliers', roles: ['Admin'] },
-    { name: 'إدارة المنتجات', enName: 'Products', path: '/admin/products', roles: ['Admin'] },
+    { name: 'إدارة المنتجات', enName: 'Products', path: '/admin/products', roles: ['Admin', 'Supplier'] },
     { name: 'إدارة الأقسام', enName: 'Categories', path: '/admin/categories', roles: ['Admin'] },
     { name: 'إدارة الخصائص', enName: 'Attributes', path: '/admin/attributes', roles: ['Admin'] },
     { name: 'إدارة الإعلانات البانر', enName: 'Banners', path: '/admin/banners', roles: ['Admin'] },
     { name: 'المسوقين والعملاء', enName: 'Marketers', path: '/admin/marketers', roles: ['Admin'] },
-    { name: 'طلبات الشحن', enName: 'Orders', path: '/admin/orders', roles: ['Admin', 'Supervisor'] },
+    { name: 'طلبات الشحن', enName: 'Orders', path: '/admin/orders', roles: ['Admin', 'Supervisor', 'Supplier'] },
     { name: 'طلبات السحب', enName: 'Withdrawals', path: '/admin/withdrawals', roles: ['Admin'] },
     { name: 'الإعدادات العامة', enName: 'System Settings', path: '/admin/settings', roles: ['Admin'] },
   ];
@@ -52,6 +52,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const visibleMenuItems = (!mounted || !user)
     ? []
     : menuItems.filter(item => item.roles.includes(user.role as any));
+
+  if (!mounted || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-100" dir={dir}>
+        <div className="animate-pulse space-y-4 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-primary/20 animate-spin border-4 border-primary border-t-transparent mx-auto"></div>
+          <p className="text-xs font-bold text-slate-400">
+            {locale === 'ar' ? 'جاري التحميل...' : 'Loading...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-slate-100 text-slate-900 animate-fadeIn" dir={dir}>

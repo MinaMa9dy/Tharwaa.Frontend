@@ -20,4 +20,5 @@ export interface UpdateSupplierDto {
   firstName: string;
   lastName: string;
   phoneNumber?: string;
+  password?: string;
 }

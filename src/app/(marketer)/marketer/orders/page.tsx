@@ -290,6 +290,12 @@ export default function MarketerOrdersPage() {
                       <MapPinIcon className="w-3.5 h-3.5 text-slate-400" />
                       <span>{order.shippingAddress.street}، {order.shippingAddress.city}، {order.shippingAddress.state}</span>
                     </p>
+                    {order.supplierName && (
+                      <p className="flex items-center gap-1.5 text-xs text-slate-500 font-bold mt-1">
+                        <span>🏪</span>
+                        <span>{locale === 'ar' ? 'المورد:' : 'Supplier:'} {order.supplierName}</span>
+                      </p>
+                    )}
                     {order.notes && (
                       <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded-xl border border-amber-100 mt-2 font-bold flex items-center gap-1.5 w-fit">
                         <FileIcon className="w-3.5 h-3.5 text-amber-600" />

@@ -9,9 +9,9 @@ export const orderService = {
     return response.data;
   },
 
-  async getAll(marketerId?: string, status?: string, search?: string, pageNumber?: number, pageSize?: number, supervisorId?: string, unassignedOnly?: boolean): Promise<ApiResult<OrderDto[]>> {
+  async getAll(marketerId?: string, status?: string, search?: string, pageNumber?: number, pageSize?: number, supervisorId?: string, unassignedOnly?: boolean, supplierId?: string): Promise<ApiResult<OrderDto[]>> {
     const response = await apiClient.get<ApiResult<OrderDto[]>>('/Orders', {
-      params: { marketerId, status, search, pageNumber, pageSize, supervisorId, unassignedOnly },
+      params: { marketerId, status, search, pageNumber, pageSize, supervisorId, unassignedOnly, supplierId },
     });
     return response.data;
   },

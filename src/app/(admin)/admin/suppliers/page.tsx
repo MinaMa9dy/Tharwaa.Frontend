@@ -3,10 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import { useLocale } from '@/shared/context/LocaleContext';
 import { supplierService } from '@/features/suppliers/api/supplierService';
-import { SupplierDto } from '@/shared/types/supplier';
+import { SupplierDto, UpdateSupplierDto } from '@/shared/types/supplier';
 import { toast } from 'react-hot-toast';
 import Pagination from '@/shared/components/Pagination';
-import { PlusIcon, SearchIcon, EditIcon, TrashIcon, CloseIcon, SaveIcon } from '@/shared/components/Icons';
+import { PlusIcon, SearchIcon, EditIcon, TrashIcon, CloseIcon, SaveIcon, CalendarIcon, MapPinIcon, FileIcon, EyeIcon } from '@/shared/components/Icons';
+import { getErrorMessage } from '@/shared/utils/error';
+import { orderService } from '@/features/orders/api/orderService';
+import { OrderDto, OrderStatus } from '@/shared/types/order';
 
 
 export default function AdminSuppliersPage() {
@@ -53,6 +56,36 @@ export default function AdminSuppliersPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<SupplierDto | null>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<SupplierDto | null>(null);
+  const [supplierOrders, setSupplierOrders] = useState<OrderDto[]>([]);
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersTotalPages, setOrdersTotalPages] = useState(1);
+  const [isOrdersLoading, setIsOrdersLoading] = useState(false);
+
+  const loadSupplierOrders = async (supplierId: string, page: number) => {
+    setIsOrdersLoading(true);
+    try {
+      const res = await orderService.getAll(undefined, undefined, undefined, page, 5, undefined, undefined, supplierId);
+      if (res.success && res.data) {
+        setSupplierOrders(res.data);
+        setOrdersTotalPages(res.meta?.totalPages || 1);
+      } else {
+        setSupplierOrders([]);
+        setOrdersTotalPages(1);
+      }
+    } catch (err) {
+      setSupplierOrders([]);
+      setOrdersTotalPages(1);
+    } finally {
+      setIsOrdersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedSupplier) {
+      loadSupplierOrders(selectedSupplier.id, ordersPage);
+    }
+  }, [selectedSupplier?.id, ordersPage]);
 
   // Form states
   const [firstName, setFirstName] = useState('');
@@ -104,6 +137,7 @@ export default function AdminSuppliersPage() {
     setFirstName(sup.firstName);
     setLastName(sup.lastName);
     setPhoneNumber(sup.phoneNumber || '');
+    setPassword('');
     setIsEditOpen(true);
   };
 
@@ -132,7 +166,7 @@ export default function AdminSuppliersPage() {
         toast.error(res.message || (locale === 'ar' ? 'فشل إضافة المورد' : 'Failed to add supplier'));
       }
     } catch (err: any) {
-      const errMsg = err.response?.data?.message || err.message || (locale === 'ar' ? 'فشل إضافة المورد' : 'Failed to add supplier');
+      const errMsg = getErrorMessage(err, locale === 'ar' ? 'فشل إضافة المورد' : 'Failed to add supplier');
       toast.error(locale === 'ar' ? `خطأ: ${errMsg}` : `Error: ${errMsg}`);
     } finally {
       setIsSubmitting(false);
@@ -148,11 +182,15 @@ export default function AdminSuppliersPage() {
 
     setIsSubmitting(true);
     try {
-      const res = await supplierService.update(editingSupplier.id, {
+      const updateData: UpdateSupplierDto = {
         firstName,
         lastName,
         phoneNumber
-      });
+      };
+      if (password) {
+        updateData.password = password;
+      }
+      const res = await supplierService.update(editingSupplier.id, updateData);
 
       if (res.success) {
         toast.success(locale === 'ar' ? 'تم تحديث بيانات المورد بنجاح!' : 'Supplier updated successfully!');
@@ -163,7 +201,7 @@ export default function AdminSuppliersPage() {
         toast.error(res.message || (locale === 'ar' ? 'فشل تعديل المورد' : 'Failed to update supplier'));
       }
     } catch (err: any) {
-      const errMsg = err.response?.data?.message || err.message || (locale === 'ar' ? 'فشل تعديل المورد' : 'Failed to update supplier');
+      const errMsg = getErrorMessage(err, locale === 'ar' ? 'فشل تعديل المورد' : 'Failed to update supplier');
       toast.error(locale === 'ar' ? `خطأ: ${errMsg}` : `Error: ${errMsg}`);
     } finally {
       setIsSubmitting(false);
@@ -182,7 +220,7 @@ export default function AdminSuppliersPage() {
         toast.error(res.message || (locale === 'ar' ? 'فشل حذف المورد' : 'Failed to delete supplier'));
       }
     } catch (err: any) {
-      const errMsg = err.response?.data?.message || err.message || (locale === 'ar' ? 'فشل حذف المورد' : 'Failed to delete supplier');
+      const errMsg = getErrorMessage(err, locale === 'ar' ? 'فشل حذف المورد' : 'Failed to delete supplier');
       toast.error(locale === 'ar' ? `خطأ: ${errMsg}` : `Error: ${errMsg}`);
     }
   };
@@ -195,7 +233,7 @@ export default function AdminSuppliersPage() {
         loadSuppliers();
       }
     } catch (err: any) {
-      const errMsg = err.response?.data?.message || err.message || (locale === 'ar' ? 'فشل تحديث حالة المورد' : 'Failed to update supplier status');
+      const errMsg = getErrorMessage(err, locale === 'ar' ? 'فشل تحديث حالة المورد' : 'Failed to update supplier status');
       toast.error(locale === 'ar' ? `خطأ: ${errMsg}` : `Error: ${errMsg}`);
     }
   };
@@ -304,6 +342,16 @@ export default function AdminSuppliersPage() {
                     </td>
                     <td className="p-4">
                       <div className="flex gap-2 justify-center items-center">
+                        <button
+                          onClick={() => {
+                            setSelectedSupplier(sup);
+                            setOrdersPage(1);
+                          }}
+                          className="p-1.5 rounded-lg text-primary hover:bg-primary/5 transition-colors text-xs font-black border border-primary/20 flex items-center gap-1 cursor-pointer"
+                        >
+                          <EyeIcon className="w-3.5 h-3.5" />
+                          <span>{locale === 'ar' ? 'الطلبات' : 'Orders'}</span>
+                        </button>
                         <button
                           onClick={() => openEditModal(sup)}
                           className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors text-xs font-black border border-amber-200 flex items-center gap-1"
@@ -419,6 +467,21 @@ export default function AdminSuppliersPage() {
                 />
               </div>
 
+              {isEditOpen && (
+                <div className="space-y-1">
+                  <label className="text-xs font-black text-slate-600">
+                    {locale === 'ar' ? 'كلمة المرور (اختياري لتغييرها):' : 'Password (optional to change):'}
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full text-right p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/10 text-xs font-bold bg-white"
+                    placeholder={locale === 'ar' ? 'اتركه فارغاً للاحتفاظ بالقديمة' : 'Leave empty to keep current'}
+                  />
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={isSubmitting}
@@ -437,6 +500,93 @@ export default function AdminSuppliersPage() {
                 )}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Supplier Orders Details Modal */}
+      {selectedSupplier && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full border border-slate-200/50 text-right animate-scaleIn my-8">
+            {/* Header */}
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div>
+                <h3 className="text-lg font-black text-slate-800 flex items-center gap-2 justify-end">
+                  <span>{locale === 'ar' ? 'طلبات المورد:' : 'Supplier Orders:'} {selectedSupplier.firstName} {selectedSupplier.lastName}</span>
+                  <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">🏪</span>
+                </h3>
+                <p className="text-xs text-slate-400 font-mono mt-0.5 select-all">ID: {selectedSupplier.id}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedSupplier(null);
+                  setSupplierOrders([]);
+                  setOrdersPage(1);
+                  setOrdersTotalPages(1);
+                }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:text-slate-700 cursor-pointer"
+              >
+                <CloseIcon className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+              {isOrdersLoading ? (
+                <div className="p-8 text-center text-xs font-black text-slate-400 animate-pulse">
+                  {locale === 'ar' ? 'جاري تحميل الطلبات...' : 'Loading orders...'}
+                </div>
+              ) : supplierOrders.length === 0 ? (
+                <div className="p-8 text-center text-xs font-black text-slate-400 bg-slate-50 rounded-2xl">
+                  {locale === 'ar' ? 'لا توجد طلبات مسجلة لهذا المورد بعد' : 'No orders recorded for this supplier yet'}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="border border-slate-200 rounded-2xl overflow-hidden divide-y divide-slate-100">
+                    {supplierOrders.map((ord) => (
+                      <div key={ord.id} className="p-4 flex justify-between items-center text-right text-xs">
+                        <div className="space-y-1">
+                          <p className="font-black text-slate-800">
+                            {locale === 'ar' ? 'الطلب' : 'Order'} #{ord.id} - {ord.customerName}
+                          </p>
+                          <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1.5 justify-end">
+                            <MapPinIcon className="w-3 h-3 text-slate-400" />
+                            <span>{ord.shippingAddress?.city || '—'}، {ord.shippingAddress?.state || '—'}</span>
+                            <span className="mx-1">|</span>
+                            <CalendarIcon className="w-3 h-3 text-slate-400" />
+                            <span>{new Date(ord.createdTime).toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-US')}</span>
+                          </p>
+                          {ord.notes && (
+                            <p className="text-[10px] text-amber-600 font-bold mt-1 bg-amber-50/50 p-1.5 rounded-lg border border-amber-100/50 inline-flex items-center gap-1">
+                              <FileIcon className="w-3 h-3 text-amber-600" />
+                              <span>{locale === 'ar' ? 'ملاحظات: ' : 'Notes: '} {ord.notes}</span>
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-left space-y-1">
+                          <p className="font-black text-slate-800">{ord.totalAmount} {locale === 'ar' ? 'ج.م' : 'EGP'}</p>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${
+                            ord.status === OrderStatus.Delivered
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : ord.status === OrderStatus.Cancelled || ord.status === OrderStatus.ConfirmationFailed
+                              ? 'bg-rose-50 text-rose-700 border-rose-200'
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}>
+                            {locale === 'ar' ? ord.status : ord.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {ordersTotalPages > 1 && (
+                    <Pagination
+                      currentPage={ordersPage}
+                      totalPages={ordersTotalPages}
+                      onPageChange={setOrdersPage}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
