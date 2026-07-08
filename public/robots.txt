@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Explicitly allow Google Adsense crawler
+User-agent: Mediapartners-Google
+Allow: /
+
+# Explicitly allow Google search crawler
+User-agent: Googlebot
+Allow: /
