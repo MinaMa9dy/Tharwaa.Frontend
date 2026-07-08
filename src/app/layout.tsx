@@ -42,11 +42,10 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <Script
+        <script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6740138229892588"
           crossOrigin="anonymous"
-          strategy="afterInteractive"
         />
       </head>
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 overflow-x-hidden" suppressHydrationWarning>
