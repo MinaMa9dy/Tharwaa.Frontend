@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Cairo, Outfit } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { LocaleProvider } from "@/shared/context/LocaleContext";
 import WhatsAppSupport from "@/shared/components/WhatsAppSupport";
@@ -40,6 +41,14 @@ export default function RootLayout({
       className={`${cairo.variable} ${outfit.variable} h-full antialiased font-sans`}
       suppressHydrationWarning
     >
+      <head>
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6740138229892588"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 overflow-x-hidden" suppressHydrationWarning>
         <LocaleProvider>
           <Toaster

@@ -1,20 +1,50 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useLocale } from '@/shared/context/LocaleContext';
 import { CloseIcon } from '@/shared/components/Icons';
 import { useAuthStore } from '@/features/auth/store/authStore';
+import { useCartStore } from '@/features/cart/store/cartStore';
+import { useWishlistStore } from '@/features/wishlist/store/wishlistStore';
+import { marketerService } from '@/features/marketers/api/marketerService';
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   const { locale, setLocale, dir, t } = useLocale();
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
+  const pathname = usePathname();
+  const { cart, fetchCart } = useCartStore();
+  const { fetchWishlist } = useWishlistStore();
+  const [balance, setBalance] = useState<number | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (user?.id && user?.role === 'Marketer') {
+      fetchCart();
+      fetchWishlist();
+      marketerService.getBalance(user.id).then((res) => {
+        if (res.success && res.data) {
+          setBalance(res.data.balance);
+        }
+      });
+    }
+  }, [user, fetchCart, fetchWishlist]);
+
+  const cartItemsCount = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+
+  const menuItems = [
+    { name: 'المنتجات', enName: 'Products', path: '/marketer/products' },
+    { name: 'المفضلة', enName: 'Wishlist', path: '/marketer/wishlist' },
+    { name: 'طلباتي', enName: 'My Orders', path: '/marketer/orders' },
+    { name: 'الأرباح والسحوبات', enName: 'Withdrawals', path: '/marketer/withdrawals' },
+    { name: 'الإحصائيات', enName: 'Dashboard', path: '/marketer/dashboard' },
+  ];
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans" dir={dir}>
@@ -33,15 +63,33 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             </Link>
 
             <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
-              <Link href="/products" className="hover:text-primary transition-colors font-bold">
-                {locale === 'ar' ? 'تصفح المنتجات' : 'Browse Products'}
-              </Link>
-              <Link href="/#how-it-works" className="hover:text-primary transition-colors">
-                {t('howItWorks')}
-              </Link>
-              <Link href="/#why-us" className="hover:text-primary transition-colors">
-                {t('whyUs')}
-              </Link>
+              {mounted && user?.role === 'Marketer' ? (
+                menuItems.map((item) => (
+                  <Link
+                    key={item.path}
+                    href={item.path}
+                    className={`transition-colors py-1 font-bold ${
+                      pathname === item.path
+                        ? 'text-primary'
+                        : 'text-slate-600 hover:text-primary'
+                    }`}
+                  >
+                    {locale === 'ar' ? item.name : item.enName}
+                  </Link>
+                ))
+              ) : (
+                <>
+                  <Link href="/products" className="hover:text-primary transition-colors font-bold">
+                    {locale === 'ar' ? 'تصفح المنتجات' : 'Browse Products'}
+                  </Link>
+                  <Link href="/#how-it-works" className="hover:text-primary transition-colors">
+                    {t('howItWorks')}
+                  </Link>
+                  <Link href="/#why-us" className="hover:text-primary transition-colors">
+                    {t('whyUs')}
+                  </Link>
+                </>
+              )}
             </nav>
           </div>
 
@@ -55,14 +103,62 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             </button>
 
             {mounted && user ? (
-              <Link
-                href={user.role === 'Admin' || user.role === 'Supervisor' || user.role === 'Supplier'
-                  ? '/admin/dashboard'
-                  : '/marketer/products'}
-                className="bg-primary hover:bg-primary/90 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-primary/10 hover:-translate-y-0.5 transition-all"
-              >
-                {locale === 'ar' ? 'لوحة التحكم' : 'Dashboard'}
-              </Link>
+              user.role === 'Marketer' ? (
+                <>
+                  {/* Marketer Balance Display */}
+                  {balance !== null && (
+                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs sm:text-sm font-extrabold">
+                      <span>💸 {locale === 'ar' ? 'رصيدك المعلق:' : 'Balance:'}</span>
+                      <span>{balance.toLocaleString()} {locale === 'ar' ? 'ج.م' : 'EGP'}</span>
+                    </div>
+                  )}
+
+                  {/* Cart Icon Button */}
+                  <Link
+                    href="/marketer/cart"
+                    className="relative p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors flex items-center justify-center shrink-0"
+                  >
+                    <svg className="w-5.5 h-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                    </svg>
+                    {cartItemsCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center animate-pulse">
+                        {cartItemsCount}
+                      </span>
+                    )}
+                  </Link>
+
+                  {/* Profile Summary / User Details */}
+                  <div className="hidden sm:flex items-center gap-3 border-r border-slate-200 pr-3 sm:pr-4">
+                    <div className="flex flex-col text-left">
+                      <span className="text-xs font-black text-slate-800">
+                        {`${user.firstName} ${user.lastName}`}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">
+                        {locale === 'ar' ? 'مسوق' : 'Marketer'}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => logout()}
+                      className="p-2 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+                      title={locale === 'ar' ? 'تسجيل الخروج' : 'Logout'}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <Link
+                  href={user.role === 'Admin' || user.role === 'Supervisor' || user.role === 'Supplier'
+                    ? '/admin/dashboard'
+                    : '/marketer/products'}
+                  className="bg-primary hover:bg-primary/90 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-primary/10 hover:-translate-y-0.5 transition-all"
+                >
+                  {locale === 'ar' ? 'لوحة التحكم' : 'Dashboard'}
+                </Link>
+              )
             ) : (
               <>
                 <Link
@@ -119,20 +215,58 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                 <CloseIcon className="w-4 h-4" />
               </button>
             </div>
-            <nav className="flex flex-col gap-5 text-base font-bold text-slate-700">
-              <Link href="/products" onClick={() => setIsMenuOpen(false)} className="hover:text-primary transition-colors pb-2 border-b border-slate-100">
-                {locale === 'ar' ? 'تصفح المنتجات' : 'Browse Products'}
-              </Link>
-              <Link href="/#how-it-works" onClick={() => setIsMenuOpen(false)} className="hover:text-primary transition-colors pb-2 border-b border-slate-100">
-                {t('howItWorks')}
-              </Link>
-              <Link href="/#why-us" onClick={() => setIsMenuOpen(false)} className="hover:text-primary transition-colors pb-2 border-b border-slate-100">
-                {t('whyUs')}
-              </Link>
+            <nav className="flex flex-col gap-4 text-base font-bold text-slate-700">
+              {mounted && user?.role === 'Marketer' ? (
+                menuItems.map((item) => (
+                  <Link
+                    key={item.path}
+                    href={item.path}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={`pb-2 border-b border-slate-100 hover:text-primary ${
+                      pathname === item.path ? 'text-primary' : 'text-slate-700'
+                    }`}
+                  >
+                    {locale === 'ar' ? item.name : item.enName}
+                  </Link>
+                ))
+              ) : (
+                <>
+                  <Link href="/products" onClick={() => setIsMenuOpen(false)} className="hover:text-primary transition-colors pb-2 border-b border-slate-100">
+                    {locale === 'ar' ? 'تصفح المنتجات' : 'Browse Products'}
+                  </Link>
+                  <Link href="/#how-it-works" onClick={() => setIsMenuOpen(false)} className="hover:text-primary transition-colors pb-2 border-b border-slate-100">
+                    {t('howItWorks')}
+                  </Link>
+                  <Link href="/#why-us" onClick={() => setIsMenuOpen(false)} className="hover:text-primary transition-colors pb-2 border-b border-slate-100">
+                    {t('whyUs')}
+                  </Link>
+                </>
+              )}
             </nav>
           </div>
 
           <div className="space-y-4 border-t border-slate-100 pt-6">
+            {mounted && user?.role === 'Marketer' && balance !== null && (
+              <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-extrabold">
+                <span>💸 {locale === 'ar' ? 'الرصيد المعلق:' : 'Pending Balance:'}</span>
+                <span>{balance.toLocaleString()} {locale === 'ar' ? 'ج.م' : 'EGP'}</span>
+              </div>
+            )}
+            {mounted && user?.role === 'Marketer' && (
+              <div className="flex items-center gap-3 p-2">
+                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-extrabold text-sm uppercase">
+                  {user.firstName?.[0] || 'M'}
+                </div>
+                <div className="flex flex-col text-left">
+                  <span className="text-sm font-bold text-slate-800">
+                    {`${user.firstName} ${user.lastName}`}
+                  </span>
+                  <span className="text-xs text-slate-400 font-semibold">
+                    {locale === 'ar' ? 'حساب مسوق' : 'Marketer Account'}
+                  </span>
+                </div>
+              </div>
+            )}
             <button
               onClick={() => { setLocale(locale === 'ar' ? 'en' : 'ar'); setIsMenuOpen(false); }}
               className="w-full py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
@@ -140,15 +274,30 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
               🌐 {locale === 'ar' ? 'English' : 'العربية'}
             </button>
             {mounted && user ? (
-              <Link
-                href={user.role === 'Admin' || user.role === 'Supervisor' || user.role === 'Supplier'
-                  ? '/admin/dashboard'
-                  : '/marketer/products'}
-                onClick={() => setIsMenuOpen(false)}
-                className="block w-full text-center bg-primary hover:bg-primary/90 text-white text-sm font-bold py-3 rounded-xl shadow transition-all"
-              >
-                {locale === 'ar' ? 'لوحة التحكم' : 'Dashboard'}
-              </Link>
+              user.role === 'Marketer' ? (
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    logout();
+                  }}
+                  className="w-full py-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 text-sm font-bold flex items-center justify-center gap-2 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                  </svg>
+                  {locale === 'ar' ? 'تسجيل الخروج' : 'Logout'}
+                </button>
+              ) : (
+                <Link
+                  href={user.role === 'Admin' || user.role === 'Supervisor' || user.role === 'Supplier'
+                    ? '/admin/dashboard'
+                    : '/marketer/products'}
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block w-full text-center bg-primary hover:bg-primary/90 text-white text-sm font-bold py-3 rounded-xl shadow transition-all"
+                >
+                  {locale === 'ar' ? 'لوحة التحكم' : 'Dashboard'}
+                </Link>
+              )
             ) : (
               <>
                 <Link
