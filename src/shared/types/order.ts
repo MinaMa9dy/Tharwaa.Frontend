@@ -37,6 +37,7 @@ export interface OrderDto {
   supervisorName?: string;
   supplierId?: string;
   supplierName?: string;
+  supplierPhone?: string;
   customerName: string;
   customerPhone: string;
   customerAddress?: string;

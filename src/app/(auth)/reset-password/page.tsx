@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import axios from 'axios';
 import { useLocale } from '@/shared/context/LocaleContext';
-import { WarningIcon } from '@/shared/components/Icons';
+import { WarningIcon, EyeIcon, EyeOffIcon } from '@/shared/components/Icons';
 
 const resetPasswordSchema = (t: (k: string) => string) => z.object({
   newPassword: z.string().min(6, { message: t('passwordMin') }),
@@ -26,6 +26,8 @@ function ResetPasswordForm() {
   const userId = searchParams.get('userId');
   const token = searchParams.get('token');
 
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -116,14 +118,27 @@ function ResetPasswordForm() {
             <label className="block text-sm font-bold text-slate-700 mb-1.5">
               {t('newPassword')}
             </label>
-            <input
-              type="password"
-              {...register('newPassword')}
-              className={`w-full px-4 py-3 rounded-xl border ${
-                errors.newPassword ? 'border-red-400 focus:ring-red-200' : 'border-slate-200 focus:ring-primary/20'
-              } focus:border-primary focus:outline-none focus:ring-4 transition-all text-sm font-semibold`}
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                type={showNewPassword ? 'text' : 'password'}
+                {...register('newPassword')}
+                className={`w-full ${locale === 'ar' ? 'pl-12 pr-4' : 'pr-12 pl-4'} py-3 rounded-xl border ${
+                  errors.newPassword ? 'border-red-400 focus:ring-red-200' : 'border-slate-200 focus:ring-primary/20'
+                } focus:border-primary focus:outline-none focus:ring-4 transition-all text-sm font-semibold`}
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className={`absolute inset-y-0 ${locale === 'ar' ? 'left-0 pl-3.5' : 'right-0 pr-3.5'} flex items-center text-slate-400 hover:text-slate-600 focus:outline-none`}
+              >
+                {showNewPassword ? (
+                  <EyeOffIcon className="w-5 h-5" />
+                ) : (
+                  <EyeIcon className="w-5 h-5" />
+                )}
+              </button>
+            </div>
             {errors.newPassword && (
               <p className="mt-1.5 text-xs font-bold text-red-500">{errors.newPassword.message}</p>
             )}
@@ -133,14 +148,27 @@ function ResetPasswordForm() {
             <label className="block text-sm font-bold text-slate-700 mb-1.5">
               {t('confirmNewPassword')}
             </label>
-            <input
-              type="password"
-              {...register('confirmNewPassword')}
-              className={`w-full px-4 py-3 rounded-xl border ${
-                errors.confirmNewPassword ? 'border-red-400 focus:ring-red-200' : 'border-slate-200 focus:ring-primary/20'
-              } focus:border-primary focus:outline-none focus:ring-4 transition-all text-sm font-semibold`}
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                type={showConfirmNewPassword ? 'text' : 'password'}
+                {...register('confirmNewPassword')}
+                className={`w-full ${locale === 'ar' ? 'pl-12 pr-4' : 'pr-12 pl-4'} py-3 rounded-xl border ${
+                  errors.confirmNewPassword ? 'border-red-400 focus:ring-red-200' : 'border-slate-200 focus:ring-primary/20'
+                } focus:border-primary focus:outline-none focus:ring-4 transition-all text-sm font-semibold`}
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                className={`absolute inset-y-0 ${locale === 'ar' ? 'left-0 pl-3.5' : 'right-0 pr-3.5'} flex items-center text-slate-400 hover:text-slate-600 focus:outline-none`}
+              >
+                {showConfirmNewPassword ? (
+                  <EyeOffIcon className="w-5 h-5" />
+                ) : (
+                  <EyeIcon className="w-5 h-5" />
+                )}
+              </button>
+            </div>
             {errors.confirmNewPassword && (
               <p className="mt-1.5 text-xs font-bold text-red-500">{errors.confirmNewPassword.message}</p>
             )}

@@ -372,24 +372,35 @@ export default function AdminOrdersPage() {
                       </span>
                       <span className="text-sm font-black text-slate-900">{locale === 'ar' ? 'الطلب' : 'Order'} #{order.id}</span>
                     </div>
-                    <p className="text-xs text-slate-500 font-bold flex items-center gap-1.5 flex-wrap justify-end">
-                      <span>{order.customerPhone}</span>
-                      <PhoneIcon className="w-3.5 h-3.5 text-slate-400" />
-                      <span className="text-slate-300">|</span>
-                      <span>{locale === 'ar' ? 'العميل:' : 'Customer:'} {order.customerName}</span>
-                      <UserIcon className="w-3.5 h-3.5 text-slate-400" />
-                    </p>
-                    <p className="text-xs text-slate-500 font-bold flex items-center gap-1.5 flex-wrap justify-end">
-                      <span>{locale === 'ar' ? 'العنوان:' : 'Address:'} {order.shippingAddress?.street}، {order.shippingAddress?.city}، {order.shippingAddress?.state}</span>
-                      <MapPinIcon className="w-3.5 h-3.5 text-slate-400" />
-                    </p>
-                    {order.supplierName && (
+                    {!isSupplier && (
+                      <>
+                        <p className="text-xs text-slate-500 font-bold flex items-center gap-1.5 flex-wrap justify-end">
+                          <span>{order.customerPhone}</span>
+                          <PhoneIcon className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="text-slate-300">|</span>
+                          <span>{locale === 'ar' ? 'العميل:' : 'Customer:'} {order.customerName}</span>
+                          <UserIcon className="w-3.5 h-3.5 text-slate-400" />
+                        </p>
+                        <p className="text-xs text-slate-500 font-bold flex items-center gap-1.5 flex-wrap justify-end">
+                          <span>{locale === 'ar' ? 'العنوان:' : 'Address:'} {order.shippingAddress?.street}، {order.shippingAddress?.city}، {order.shippingAddress?.state}</span>
+                          <MapPinIcon className="w-3.5 h-3.5 text-slate-400" />
+                        </p>
+                      </>
+                    )}
+                    {order.supplierName && (isAdmin || isSupervisor) && (
                       <p className="text-xs text-slate-500 font-bold flex items-center gap-1.5 flex-wrap justify-end">
+                        {order.supplierPhone && (
+                          <>
+                            <span>{order.supplierPhone}</span>
+                            <PhoneIcon className="w-3.5 h-3.5 text-slate-400" />
+                            <span className="text-slate-300">|</span>
+                          </>
+                        )}
                         <span>{locale === 'ar' ? 'المورد:' : 'Supplier:'} {order.supplierName}</span>
                         <span>🏪</span>
                       </p>
                     )}
-                    {order.marketerName && (
+                    {!isSupplier && order.marketerName && (
                       <p className="text-xs text-slate-500 font-bold flex items-center gap-1.5 flex-wrap justify-end">
                         <span>{locale === 'ar' ? 'المسوق:' : 'Marketer:'} {order.marketerName}</span>
                         <MegaphoneIcon className="w-3.5 h-3.5 text-slate-400" />
@@ -473,10 +484,12 @@ export default function AdminOrdersPage() {
                         )}
                       </div>
                     )}
-                    <p className="text-xs font-black text-emerald-600 flex items-center gap-1 justify-end mt-1.5">
-                      <span>{locale === 'ar' ? 'عمولة المسوق:' : 'Commission:'} {order.commission} ج.م | {locale === 'ar' ? 'القيمة الكلية:' : 'Total:'} {order.totalAmount} ج.م</span>
-                      <WalletIcon className="w-3.5 h-3.5 text-emerald-600" />
-                    </p>
+                    {!isSupplier && (
+                      <p className="text-xs font-black text-emerald-600 flex items-center gap-1 justify-end mt-1.5">
+                        <span>{locale === 'ar' ? 'عمولة المسوق:' : 'Commission:'} {order.commission} ج.م | {locale === 'ar' ? 'القيمة الكلية:' : 'Total:'} {order.totalAmount} ج.م</span>
+                        <WalletIcon className="w-3.5 h-3.5 text-emerald-600" />
+                      </p>
+                    )}
                   </div>
 
                   {/* Status action controllers */}
@@ -605,14 +618,18 @@ export default function AdminOrdersPage() {
                             )}
                           </div>
                           <div className="text-left shrink-0 font-black text-xs space-y-1">
-                            <div className="flex justify-end gap-2">
-                              <span className="text-slate-400">{locale === 'ar' ? 'السعر الأساسي:' : 'Base Price:'}</span>
-                              <span className="text-emerald-600">{((item.unitPrice || 0) - (item.unitProfit || 0)).toLocaleString()} ج.م</span>
-                            </div>
-                            <div className="flex justify-end gap-2">
-                              <span className="text-slate-400">{locale === 'ar' ? 'سعر البيع:' : 'Sell Price:'}</span>
-                              <span className="text-slate-700">{(item.unitPrice || 0).toLocaleString()} ج.م</span>
-                            </div>
+                            {!isSupplier && (
+                              <>
+                                <div className="flex justify-end gap-2">
+                                  <span className="text-slate-400">{locale === 'ar' ? 'السعر الأساسي:' : 'Base Price:'}</span>
+                                  <span className="text-emerald-600">{((item.unitPrice || 0) - (item.unitProfit || 0)).toLocaleString()} ج.م</span>
+                                </div>
+                                <div className="flex justify-end gap-2">
+                                  <span className="text-slate-400">{locale === 'ar' ? 'سعر البيع:' : 'Sell Price:'}</span>
+                                  <span className="text-slate-700">{(item.unitPrice || 0).toLocaleString()} ج.م</span>
+                                </div>
+                              </>
+                            )}
                             <div className="flex justify-end gap-2 border-t border-slate-100 pt-1 mt-1">
                               <span className="text-primary">x{item.quantity}</span>
                             </div>

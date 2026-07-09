@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useLocale } from '@/shared/context/LocaleContext';
 import { useAuthStore } from '@/features/auth/store/authStore';
-import { WarningIcon } from '@/shared/components/Icons';
+import { WarningIcon, EyeIcon, EyeOffIcon } from '@/shared/components/Icons';
 
 const loginSchema = (t: (k: string) => string) => z.object({
   email: z.string().min(1, { message: t('emailRequired') || 'البريد الإلكتروني مطلوب' }).email({ message: t('invalidEmail') || 'بريد إلكتروني غير صالح' }),
@@ -19,6 +19,7 @@ type LoginFormValues = z.infer<ReturnType<typeof loginSchema>>;
 
 export default function LoginPage() {
   const { t, locale } = useLocale();
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { login, googleLogin } = useAuthStore();
@@ -174,14 +175,27 @@ export default function LoginPage() {
               {t('forgotPasswordQ')}
             </Link>
           </div>
-          <input
-            type="password"
-            {...register('password')}
-            className={`w-full px-4 py-3 rounded-xl border ${
-              errors.password ? 'border-red-400 focus:ring-red-200' : 'border-slate-200 focus:ring-primary/20'
-            } focus:border-primary focus:outline-none focus:ring-4 transition-all text-sm font-semibold`}
-            placeholder="••••••••"
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              {...register('password')}
+              className={`w-full ${locale === 'ar' ? 'pl-12 pr-4' : 'pr-12 pl-4'} py-3 rounded-xl border ${
+                errors.password ? 'border-red-400 focus:ring-red-200' : 'border-slate-200 focus:ring-primary/20'
+              } focus:border-primary focus:outline-none focus:ring-4 transition-all text-sm font-semibold`}
+              placeholder="••••••••"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className={`absolute inset-y-0 ${locale === 'ar' ? 'left-0 pl-3.5' : 'right-0 pr-3.5'} flex items-center text-slate-400 hover:text-slate-600 focus:outline-none`}
+            >
+              {showPassword ? (
+                <EyeOffIcon className="w-5 h-5" />
+              ) : (
+                <EyeIcon className="w-5 h-5" />
+              )}
+            </button>
+          </div>
           {errors.password && (
             <p className="mt-1.5 text-xs font-bold text-red-500">{errors.password.message}</p>
           )}

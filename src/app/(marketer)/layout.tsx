@@ -70,12 +70,12 @@ export default function MarketerLayout({ children }: { children: React.ReactNode
       {/* Marketer Header */}
       <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
-          <div className="flex items-center gap-6 lg:gap-10">
+          <div className="flex items-center gap-6 lg:gap-10 min-w-0 flex-1">
             <Link href="/marketer/products" className="flex items-center gap-2 group shrink-0">
               <span className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-primary flex items-center justify-center text-white font-extrabold text-lg sm:text-xl shadow-lg shadow-primary/20">
                 ث
               </span>
-              <span className="text-lg sm:text-2xl font-black text-slate-800 tracking-tight">
+              <span className="hidden sm:inline text-lg sm:text-2xl font-black text-slate-800 tracking-tight">
                 {t('navBrand')}
               </span>
             </Link>
@@ -98,7 +98,7 @@ export default function MarketerLayout({ children }: { children: React.ReactNode
             </nav>
           </div>
 
-          <div className="flex items-center gap-3 sm:gap-6">
+          <div className="flex items-center gap-3 sm:gap-6 shrink-0">
             {/* Language Switcher */}
             <button
               onClick={() => setLocale(locale === 'ar' ? 'en' : 'ar')}

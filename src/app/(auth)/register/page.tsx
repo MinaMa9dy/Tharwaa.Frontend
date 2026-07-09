@@ -9,7 +9,7 @@ import * as z from 'zod';
 import { useLocale } from '@/shared/context/LocaleContext';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { toast } from 'react-hot-toast';
-import { WarningIcon } from '@/shared/components/Icons';
+import { WarningIcon, EyeIcon, EyeOffIcon } from '@/shared/components/Icons';
 
 const registerSchema = (t: (k: string) => string) => z.object({
   firstName: z.string().min(1, { message: 'الاسم الأول مطلوب' }),
@@ -27,6 +27,8 @@ type RegisterFormValues = z.infer<ReturnType<typeof registerSchema>>;
 
 export default function RegisterPage() {
   const { t, locale } = useLocale();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { register: registerUser, googleLogin } = useAuthStore();
@@ -235,14 +237,27 @@ export default function RegisterPage() {
           <label className="block text-xs font-bold text-slate-700 mb-1">
             {t('password')}
           </label>
-          <input
-            type="password"
-            {...register('password')}
-            className={`w-full px-3 py-2.5 rounded-lg border ${
-              errors.password ? 'border-red-400 focus:ring-red-200' : 'border-slate-200 focus:ring-primary/20'
-            } focus:border-primary focus:outline-none focus:ring-4 transition-all text-xs font-semibold`}
-            placeholder="••••••••"
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              {...register('password')}
+              className={`w-full ${locale === 'ar' ? 'pl-10 pr-3' : 'pr-10 pl-3'} py-2.5 rounded-lg border ${
+                errors.password ? 'border-red-400 focus:ring-red-200' : 'border-slate-200 focus:ring-primary/20'
+              } focus:border-primary focus:outline-none focus:ring-4 transition-all text-xs font-semibold`}
+              placeholder="••••••••"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className={`absolute inset-y-0 ${locale === 'ar' ? 'left-0 pl-3' : 'right-0 pr-3'} flex items-center text-slate-400 hover:text-slate-600 focus:outline-none`}
+            >
+              {showPassword ? (
+                <EyeOffIcon className="w-4 h-4" />
+              ) : (
+                <EyeIcon className="w-4 h-4" />
+              )}
+            </button>
+          </div>
           {errors.password && (
             <p className="mt-1 text-[10px] font-bold text-red-500">{errors.password.message}</p>
           )}
@@ -252,14 +267,27 @@ export default function RegisterPage() {
           <label className="block text-xs font-bold text-slate-700 mb-1">
             {t('confirmPassword')}
           </label>
-          <input
-            type="password"
-            {...register('confirmPassword')}
-            className={`w-full px-3 py-2.5 rounded-lg border ${
-              errors.confirmPassword ? 'border-red-400 focus:ring-red-200' : 'border-slate-200 focus:ring-primary/20'
-            } focus:border-primary focus:outline-none focus:ring-4 transition-all text-xs font-semibold`}
-            placeholder="••••••••"
-          />
+          <div className="relative">
+            <input
+              type={showConfirmPassword ? 'text' : 'password'}
+              {...register('confirmPassword')}
+              className={`w-full ${locale === 'ar' ? 'pl-10 pr-3' : 'pr-10 pl-3'} py-2.5 rounded-lg border ${
+                errors.confirmPassword ? 'border-red-400 focus:ring-red-200' : 'border-slate-200 focus:ring-primary/20'
+              } focus:border-primary focus:outline-none focus:ring-4 transition-all text-xs font-semibold`}
+              placeholder="••••••••"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className={`absolute inset-y-0 ${locale === 'ar' ? 'left-0 pl-3' : 'right-0 pr-3'} flex items-center text-slate-400 hover:text-slate-600 focus:outline-none`}
+            >
+              {showConfirmPassword ? (
+                <EyeOffIcon className="w-4 h-4" />
+              ) : (
+                <EyeIcon className="w-4 h-4" />
+              )}
+            </button>
+          </div>
           {errors.confirmPassword && (
             <p className="mt-1 text-[10px] font-bold text-red-500">{errors.confirmPassword.message}</p>
           )}

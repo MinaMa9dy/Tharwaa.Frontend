@@ -474,7 +474,7 @@ export default function ProductsPage() {
                 className="group bg-white rounded-2xl sm:rounded-3xl border border-slate-200 hover:border-primary/30 overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-300 relative"
               >
                 <div className="relative block">
-                  <Link href={`/products/${prod.id}`} className="block">
+                  <Link href={`/marketer/products/${prod.id}`} className="block">
                     <div className="relative aspect-square w-full bg-slate-50 overflow-hidden">
                       {mainImg ? (
                         <img
@@ -500,7 +500,7 @@ export default function ProductsPage() {
 
                 <div className="p-3 sm:p-5 flex-1 flex flex-col justify-between space-y-3 sm:space-y-4 text-right">
                   <div className="space-y-1">
-                    <Link href={`/products/${prod.id}`} className="block group">
+                    <Link href={`/marketer/products/${prod.id}`} className="block group">
                       <div className="flex items-center justify-between">
                         <span className="text-[9px] sm:text-[10px] font-black text-primary/80 uppercase">
                           {prod.categoryName || (locale === 'ar' ? 'تصنيف عام' : 'General')}
