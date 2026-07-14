@@ -314,26 +314,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Trust Stats Section */}
-      <section id="stats" className="py-16 bg-slate-900 text-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-indigo-500/10 opacity-30"></div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
-            <div className="space-y-2">
-              <span className="text-4xl sm:text-5xl font-black text-primary block tracking-tight">{t('statsActiveMarketers')}</span>
-              <span className="text-sm text-slate-400 font-semibold">{locale === 'ar' ? 'مسوق يربح يومياً معنا' : 'Marketers earning daily with us'}</span>
-            </div>
-            <div className="space-y-2 border-y md:border-y-0 md:border-x border-white/10 py-8 md:py-0">
-              <span className="text-4xl sm:text-5xl font-black text-primary block tracking-tight">{t('statsOrdersDelivered')}</span>
-              <span className="text-sm text-slate-400 font-semibold">{locale === 'ar' ? 'طلب تم شحنه وتسليمه بنجاح' : 'Delivered and paid orders'}</span>
-            </div>
-            <div className="space-y-2">
-              <span className="text-4xl sm:text-5xl font-black text-primary block tracking-tight">{t('statsPaidOut')}</span>
-              <span className="text-sm text-slate-400 font-semibold">{locale === 'ar' ? 'دفعت بالكامل للمسوقين' : 'Paid out directly to marketers'}</span>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* About Us Section */}
       <section id="about-us" className="py-20 lg:py-32 bg-white relative overflow-hidden">
@@ -377,7 +357,7 @@ export default function LandingPage() {
 
             {/* Core Values Column (Glassmorphic Mock Card) */}
             <div className="lg:col-span-5 relative flex justify-center">
-              <div className="w-full max-w-sm bg-gradient-to-br from-slate-950 to-slate-850 p-8 rounded-3xl text-white shadow-2xl relative overflow-hidden group">
+              <div className="w-full max-w-sm bg-gradient-to-br from-slate-900 to-slate-950 p-8 rounded-3xl text-white shadow-2xl relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-2xl"></div>
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-indigo-500"></div>
                 

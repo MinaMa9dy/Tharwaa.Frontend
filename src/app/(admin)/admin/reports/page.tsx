@@ -763,7 +763,7 @@ export default function AdminReportsPage() {
                       ) : (
                         filteredProducts.map((p) => (
                           <tr key={p.productId} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-6 py-4 font-black text-slate-850">{p.name}</td>
+                            <td className="px-6 py-4 font-black text-slate-800">{p.name}</td>
                             <td className="px-6 py-4 font-semibold text-slate-500">{p.categoryName}</td>
                             <td className="px-6 py-4 font-bold text-slate-600">{p.supplierName}</td>
                             <td className="px-6 py-4">
