@@ -16,4 +16,9 @@ export const settingsService = {
     const response = await apiClient.put<ApiResult<SystemSettingsDto>>('/Settings', dto);
     return response.data;
   },
+
+  async resetSystem(): Promise<ApiResult<any>> {
+    const response = await apiClient.post<ApiResult<any>>('/Settings/reset-system');
+    return response.data;
+  },
 };

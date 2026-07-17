@@ -12,6 +12,41 @@ export default function SystemSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetMessage, setResetMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handleResetSystem = async () => {
+    const confirmation = window.confirm(
+      locale === 'ar'
+        ? 'هل أنت متأكد من رغبتك في حذف جميع الطلبات والمسحوبات وتصفير رصيد جميع المسوقين؟ هذا الإجراء لا يمكن التراجع عنه!'
+        : 'Are you sure you want to delete all orders, withdrawals, and reset all marketer balances to 0? This action cannot be undone!'
+    );
+    if (!confirmation) return;
+
+    setIsResetting(true);
+    setResetMessage(null);
+    try {
+      const res = await settingsService.resetSystem();
+      if (res.success) {
+        setResetMessage({
+          type: 'success',
+          text: locale === 'ar' ? 'تمت إعادة تعيين بيانات النظام بالكامل بنجاح!' : 'System data has been successfully reset!',
+        });
+      } else {
+        setResetMessage({
+          type: 'error',
+          text: res.message || (locale === 'ar' ? 'فشل إعادة تعيين بيانات النظام' : 'Failed to reset system data'),
+        });
+      }
+    } catch (err: any) {
+      setResetMessage({
+        type: 'error',
+        text: err.message || (locale === 'ar' ? 'حدث خطأ أثناء الاتصال بالخادم' : 'An error occurred while connecting to server'),
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   useEffect(() => {
     async function loadSettings() {
@@ -150,6 +185,48 @@ export default function SystemSettingsPage() {
               )}
             </button>
           </form>
+
+          {/* Danger Zone */}
+          <div className="mt-8 bg-white rounded-3xl border border-rose-200 p-6 sm:p-8 space-y-6 text-right shadow-sm">
+            <h3 className="text-lg font-black text-rose-600 border-b border-rose-100 pb-3 flex items-center justify-end gap-2">
+              {locale === 'ar' ? 'منطقة الخطر - إعادة تعيين البيانات' : 'Danger Zone - Reset Data'}
+              <svg className="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </h3>
+
+            {resetMessage && (
+              <div className={`p-4 rounded-xl text-xs font-black border text-center ${
+                resetMessage.type === 'success' 
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                  : 'bg-rose-50 text-rose-700 border-rose-200'
+              }`}>
+                {resetMessage.text}
+              </div>
+            )}
+
+            <p className="text-slate-500 text-xs font-bold leading-relaxed">
+              {locale === 'ar'
+                ? 'تنبيه: هذا الإجراء سيقوم بحذف جميع طلبات الشحن والطلبات المسجلة نهائياً، وحذف جميع طلبات سحب الأرباح للمسوقين، وتصفير محافظ جميع المسوقين لتصبح 0. هذا الإجراء لا يمكن التراجع عنه.'
+                : 'Warning: This action will permanently delete all registered orders, remove all withdrawal requests, and reset all marketer wallet balances to 0. This cannot be undone.'}
+            </p>
+
+            <button
+              type="button"
+              onClick={handleResetSystem}
+              disabled={isResetting}
+              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
+            >
+              {isResetting ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>{locale === 'ar' ? 'جاري إعادة تعيين البيانات...' : 'Resetting System...'}</span>
+                </>
+              ) : (
+                <span>{locale === 'ar' ? 'إعادة تعيين كافة البيانات' : 'Reset All System Data'}</span>
+              )}
+            </button>
+          </div>
         )}
       </div>
     </div>
